@@ -3,6 +3,8 @@
 #include <LiquidCrystal.h>
 #include <Keypad.h>
 
+#define LOG 1
+
 // for DHT11, 
 //      VCC: 5V or 3V
 //      GND: GND
@@ -32,11 +34,30 @@ byte colPins[COLS] = {A11, A10, A9, A8}; //connect to the column pinouts of the 
 //initialize an instance of class NewKeypad
 Keypad kp = Keypad( makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS); 
 
-int led = 0;
+// Static strings
+//                   |0               |
+const char NAME[] = "Cure-O-Matic2000";
+const char DG[]   = "(c)DigitalGeyser";
+
+char *line1 =  NAME;
+char *line2 =  DG;
+
 int cnt;
 
+int miliseconds = 0;
+long seconds = 0;
+long lastSeconds = 0;
+
+boolean sensorError = false;
+byte temperature = 0;
+byte humidity = 0;
+
 void setup() {
+
+#ifdef LOG
   Serial.begin(9600);
+#endif
+
   pinMode(pinRELAY, OUTPUT);
 
   pinMode(pinRED, OUTPUT);
@@ -49,75 +70,102 @@ void setup() {
 
   digitalWrite(pinRELAY,HIGH);
   lcd.begin(16,2);
-  lcd.print("Cure-o-matic2000");
+  refreshScreen();
   cnt = 0;
 }
 
-void loop() {
-  // read with raw sample data.
-  byte temperature = 0;
-  byte humidity = 0;
-  byte data[40] = {0};
+char previousKey = 0;
 
-  // DHT11 read
-  if (dht11.read(pinDHT11, &temperature, &humidity, data)) {
-    Serial.println("Sensor read error!");
-    delay(50);
-    return;
-  }
-
-  // Twiddle the LED
-  Serial.print  ("LED:");
-  Serial.print  (led & 0x01);
-  Serial.print  ( (led & 0x02) >> 1);
-  Serial.println( (led & 0x04) >> 2);
-  analogWrite(pinRED,   ( (led & 0x0001) == 0) ? 0 : 255);
-  analogWrite(pinGREEN, ( (led & 0x0002) == 0) ? 0 : 255);
-  analogWrite(pinBLUE,  ( (led & 0x0004) == 0) ? 0 : 255);
-  led++;
-
-  
-  Serial.print("Sensor bits: ");
-  for (int i = 0; i < 40; i++) {
-    Serial.print((int)data[i]);
-    if (i > 0 && ((i + 1) % 4) == 0) {
-      Serial.print(' ');
+void keyTick() {
+  char key = kp.getKey();
+  if(key!=previousKey) {
+    previousKey = key;
+    if ( key == 0 ) {
+#ifdef LOG
+      Serial.println("Key off.");
+#endif
+    } else {
+#ifdef LOG
+      Serial.print("Key:"); Serial.println(key);
+#endif
     }
   }
-  Serial.println("");
+}
+
+void refreshScreen() {
+  lcd.clear();
+  lcd.print(line1);  
+  lcd.setCursor(0,1);
+  lcd.print(line2);
+}
+
+void sensorTick() {
+  // DHT11 read
+  int retries = 3;
+  int success;
+  while(retries>0) {
+    if (dht11.read(pinDHT11, &temperature, &humidity, NULL)) {
+     retries--;
+     success = 0;
+   } else {
+     success = 1;
+     break;
+   }
+  }
+
+  if ( !success ) {
+#ifdef LOG
+  Serial.println("SENSOR ERROR!");
+  sensorError = true;
+  return;
+#endif
+  } else {
+    sensorError = false;
+  }
   
+#ifdef LOG  
   Serial.print("Sensor data: ");
   Serial.print((int)temperature); Serial.print(" *C, ");
   Serial.print((int)humidity); Serial.println(" %");
+#endif
 
-  
-  
   if ( humidity > 50 ) {
     digitalWrite(pinRELAY, LOW);
   } else {
     digitalWrite(pinRELAY, HIGH);
   }
 
-  lcd.setCursor(0, 1);
-  lcd.print(temperature);
-  lcd.print("C");
-  lcd.setCursor(4, 1);
-  lcd.print("    ");
-  lcd.setCursor(4, 1);  
-  lcd.print(humidity);
-  lcd.print("%");
+}
 
-  lcd.setCursor(8,1);
-  lcd.print(cnt++);
-
-  lcd.setCursor(14,1);
-  char key = kp.getKey();
-  if(key) {
-    lcd.print(key);  
+void refreshLed() {
+  if ( sensorError ) {
+    analogWrite(pinRED,   255 );
+    analogWrite(pinGREEN,   0 );
+    analogWrite(pinBLUE,    0 );    
   } else {
-    lcd.print(" ");
+    analogWrite(pinRED,     0 );
+    analogWrite(pinGREEN, 255 );
+    analogWrite(pinBLUE,    0 );
+  }
+}
+
+void loop() {
+
+
+  if ( seconds - lastSeconds >= 2 ) {
+   sensorTick();
+   refreshLed();
+   lastSeconds = seconds;
   }
   
+  keyTick();  
+  
+  
   // DHT11 sampling rate is 1HZ.
-  delay(2000);
+  delay(10);
+  miliseconds += 10;
+  if ( miliseconds >= 1000 ) {
+    miliseconds = 0;
+    seconds++;
+  }
 }
