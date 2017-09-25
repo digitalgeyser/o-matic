@@ -2,7 +2,6 @@
 
 // Copyright (c) Digital Geyser, 2017
 #include <SimpleDHT.h>
-#include <LiquidCrystal.h>
 #include <Keypad.h>
 
 #define LOG 1
@@ -13,7 +12,7 @@
 //      DATA: 2
 
 SimpleDHT11 dht11;
-LiquidCrystal lcd(7,8,9,10,11,12);
+DGMenu *dg;
 
 #define pinRED 2
 #define pinGREEN 3
@@ -36,13 +35,6 @@ byte colPins[COLS] = {A11, A10, A9, A8}; //connect to the column pinouts of the 
 //initialize an instance of class NewKeypad
 Keypad kp = Keypad( makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS); 
 
-// Static strings
-//                  |0               |
-const char NAME[] = "Cure-O-Matic2000";
-const char DG[]   = "(c)DigitalGeyser";
-
-char *line1 =  NAME;
-char *line2 =  DG;
 
 int cnt;
 
@@ -71,8 +63,8 @@ void setup() {
   digitalWrite(pinBLUE, LOW);
 
   digitalWrite(pinRELAY,HIGH);
-  lcd.begin(16,2);
-  refreshScreen();
+
+  dg = new DGMenu(7,8,9,10,11,12);
   cnt = 0;
 }
 
@@ -92,13 +84,6 @@ void keyTick() {
 #endif
     }
   }
-}
-
-void refreshScreen() {
-  lcd.clear();
-  lcd.print(line1);  
-  lcd.setCursor(0,1);
-  lcd.print(line2);
 }
 
 void sensorTick() {
@@ -131,7 +116,7 @@ void sensorTick() {
   Serial.print((int)humidity); Serial.println(" %");
 #endif
 
-  if ( humidity > 50 ) {
+  if ( humidity > 75 ) {
     digitalWrite(pinRELAY, LOW);
   } else {
     digitalWrite(pinRELAY, HIGH);
