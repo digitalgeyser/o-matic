@@ -1,3 +1,5 @@
+#include <DGMenu.h>
+
 // Copyright (c) Digital Geyser, 2017
 #include <SimpleDHT.h>
 #include <LiquidCrystal.h>
@@ -35,7 +37,7 @@ byte colPins[COLS] = {A11, A10, A9, A8}; //connect to the column pinouts of the 
 Keypad kp = Keypad( makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS); 
 
 // Static strings
-//                   |0               |
+//                  |0               |
 const char NAME[] = "Cure-O-Matic2000";
 const char DG[]   = "(c)DigitalGeyser";
 
