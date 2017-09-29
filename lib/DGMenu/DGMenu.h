@@ -9,26 +9,29 @@
 #define DGMenu_h
 
 #include <LiquidCrystal.h>
-
-#define NAME "Cure-O-Matic2000"
-#define DG   "(c)DigitalGeyser"
+#define WIDTH 16
+#define HEIGHT 2
 
 class DGMenu {
   // user-accessible "public" interface
-  public:
-    DGMenu(uint8_t pin0, 
-           uint8_t pin1,
-           uint8_t pin2,
-           uint8_t pin3,
-           uint8_t pin4,
-           uint8_t pin5);
-    void refresh(void);
+ public:
+  DGMenu(uint8_t pin0, uint8_t pin1,
+	 uint8_t pin2, uint8_t pin3,
+	 uint8_t pin4, uint8_t pin5,
+	 const char *line1, const char *line2);
+  
+  void refresh(void);
+  
+  void show(int column, int row, int width, int number);
 
-  private:
-    LiquidCrystal *lcd;
-    char *line1 =  NAME;
-    char *line2 =  DG;
-
+  char *line1();
+  char *line2();
+  
+ private:
+  LiquidCrystal *lcd;
+  char *row0 = "0123456789012345";
+  char *row1 = "5432109876543210";
+  
 };
 
 #endif

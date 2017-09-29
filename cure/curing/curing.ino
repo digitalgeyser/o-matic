@@ -1,10 +1,11 @@
+// Copyright (c) Digital Geyser, 2017
+
 #include <DGMenu.h>
 
-// Copyright (c) Digital Geyser, 2017
 #include <SimpleDHT.h>
 #include <Keypad.h>
 
-// #define LOG 1
+#define LOG 1
 #define REPORT 1
 
 // for DHT11, 
@@ -21,7 +22,7 @@ DGMenu *dg;
 #define pinRelayFridge 5
 #define pinBLUE 6
 #define pinRelayDiffuser 13
-#define pinWaterLevel 0
+#define pinWaterLevel A0
 
 const byte ROWS = 4; //four rows
 const byte COLS = 4; //four columns
@@ -57,6 +58,7 @@ void setup() {
 
 #if defined(LOG) || defined(REPORT)
   Serial.begin(9600);
+  Serial.println("Startup.");
 #endif
 
   pinMode(pinRelayFridge, OUTPUT);
@@ -75,7 +77,10 @@ void setup() {
   digitalWrite(pinRelayFridge,fridgeState?LOW:HIGH);
   digitalWrite(pinRelayDiffuser, diffuserState?LOW:HIGH);
   
-  dg = new DGMenu(7,8,9,10,11,12);
+  dg = new DGMenu(7,8,9,10,11,12, 
+                  "Cure-O-Matic2000", 
+                  "(c)DigitalGeyser");
+  dg->refresh();
   cnt = 0;
 }
 
@@ -156,7 +161,7 @@ void sensorTick() {
     fridgeState = 0;
   }
   digitalWrite(pinRelayFridge, fridgeState?LOW:HIGH );
-
+  digitalWrite(pinRelayDiffuser, fridgeState?LOW:HIGH );
 }
 
 void refreshLed() {
@@ -171,12 +176,26 @@ void refreshLed() {
   }
 }
 
-void loop() {
+void refreshScreen() {
+#ifdef LOG
+  Serial.println("Refresh screen");
+#endif
+   dg->show(0, 0, seconds, 4);
+   dg->show(0, 1, temperature, 3);
+   dg->show(10, 1, humidity, 3);
+#ifdef LOG
+   Serial.println(dg->line1());
+   Serial.println(dg->line2());
+#endif
+   dg->refresh();
+}
 
+void loop() {
 
   if ( seconds - lastSeconds >= 2 ) {
    sensorTick();
    refreshLed();
+   refreshScreen();
 #ifdef REPORT
    printReport();
 #endif
