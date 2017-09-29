@@ -1,0 +1,13 @@
+#!/bin/bash
+#
+# Script used for terminal monitoring.
+
+DEV=/dev/ttyACM0
+OUT=arduino.out
+
+echo "Initializing serial port $DEV"
+stty -F $DEV cs8 9600 ignbrk -brkint -icrnl -imaxbel -opost -onlcr -isig -icanon -iexten -echo -echoe -echok -echoctl -echoke noflsh -ixon -crtscts
+
+echo "Streaming data to $OUT"
+cat $DEV | tee -a $OUT
+

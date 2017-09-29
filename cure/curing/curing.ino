@@ -4,7 +4,8 @@
 #include <SimpleDHT.h>
 #include <Keypad.h>
 
-#define LOG 1
+// #define LOG 1
+#define REPORT 1
 
 // for DHT11, 
 //      VCC: 5V or 3V
@@ -17,8 +18,10 @@ DGMenu *dg;
 #define pinRED 2
 #define pinGREEN 3
 #define pinDHT11 4
-#define pinRELAY 5
+#define pinRelayFridge 5
 #define pinBLUE 6
+#define pinRelayDiffuser 13
+#define pinWaterLevel 0
 
 const byte ROWS = 4; //four rows
 const byte COLS = 4; //four columns
@@ -45,29 +48,38 @@ long lastSeconds = 0;
 boolean sensorError = false;
 byte temperature = 0;
 byte humidity = 0;
+int waterLevel = -1;
+
+int fridgeState = 0;
+int diffuserState = 1;
 
 void setup() {
 
-#ifdef LOG
+#if defined(LOG) || defined(REPORT)
   Serial.begin(9600);
 #endif
 
-  pinMode(pinRELAY, OUTPUT);
+  pinMode(pinRelayFridge, OUTPUT);
+  pinMode(pinRelayDiffuser, OUTPUT);
 
   pinMode(pinRED, OUTPUT);
   pinMode(pinGREEN, OUTPUT);
   pinMode(pinBLUE, OUTPUT);
 
+  pinMode(pinWaterLevel, INPUT);
+  
   digitalWrite(pinRED, HIGH);
   digitalWrite(pinGREEN, LOW);
   digitalWrite(pinBLUE, LOW);
 
-  digitalWrite(pinRELAY,HIGH);
-
+  digitalWrite(pinRelayFridge,fridgeState?LOW:HIGH);
+  digitalWrite(pinRelayDiffuser, diffuserState?LOW:HIGH);
+  
   dg = new DGMenu(7,8,9,10,11,12);
   cnt = 0;
 }
 
+char lastKeyDetected = 0;
 char previousKey = 0;
 
 void keyTick() {
@@ -82,10 +94,28 @@ void keyTick() {
 #ifdef LOG
       Serial.print("Key:"); Serial.println(key);
 #endif
+      lastKeyDetected = key;
     }
   }
 }
 
+// report: time, temperature, humidity, fridge status, vaporizer status, water level
+void printReport() {
+  Serial.print(seconds);
+  Serial.print(", ");
+  Serial.print(temperature);
+  Serial.print(", ");
+  Serial.print(humidity);
+  Serial.print(", ");
+  Serial.print(fridgeState);
+  Serial.print(", ");
+  Serial.print(diffuserState);
+  Serial.print(", ");
+  Serial.print(waterLevel);
+  Serial.print(", ");
+  Serial.println(lastKeyDetected);
+}
+ 
 void sensorTick() {
   // DHT11 read
   int retries = 3;
@@ -100,10 +130,14 @@ void sensorTick() {
    }
   }
 
+  waterLevel = analogRead(pinWaterLevel);
+    
   if ( !success ) {
 #ifdef LOG
   Serial.println("SENSOR ERROR!");
   sensorError = true;
+  temperature = -1;
+  humidity = -1;
   return;
 #endif
   } else {
@@ -117,10 +151,11 @@ void sensorTick() {
 #endif
 
   if ( humidity > 75 ) {
-    digitalWrite(pinRELAY, LOW);
+    fridgeState = 1;
   } else {
-    digitalWrite(pinRELAY, HIGH);
+    fridgeState = 0;
   }
+  digitalWrite(pinRelayFridge, fridgeState?LOW:HIGH );
 
 }
 
@@ -142,6 +177,9 @@ void loop() {
   if ( seconds - lastSeconds >= 2 ) {
    sensorTick();
    refreshLed();
+#ifdef REPORT
+   printReport();
+#endif
    lastSeconds = seconds;
   }
   
