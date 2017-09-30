@@ -51,8 +51,13 @@ byte temperature = 0;
 byte humidity = 0;
 int waterLevel = -1;
 
+#define PROGRESS_COUNT 2
+int progressTick = 0;
+const char* progress = "-+";
+
 int fridgeState = 0;
 int diffuserState = 1;
+
 
 void setup() {
 
@@ -78,8 +83,8 @@ void setup() {
   digitalWrite(pinRelayDiffuser, diffuserState?LOW:HIGH);
   
   dg = new DGMenu(7,8,9,10,11,12, 
-                  "Cure-O-Matic2000", 
-                  "(c)DigitalGeyser");
+                  "Time: DDDd HH:MM", 
+                  "T:XXXF RH:XXX%  ");
   dg->refresh();
   cnt = 0;
 }
@@ -118,7 +123,8 @@ void printReport() {
   Serial.print(", ");
   Serial.print(waterLevel);
   Serial.print(", ");
-  Serial.println(lastKeyDetected);
+  Serial.print(lastKeyDetected);
+  Serial.println("");
 }
  
 void sensorTick() {
@@ -139,11 +145,11 @@ void sensorTick() {
     
   if ( !success ) {
 #ifdef LOG
-  Serial.println("SENSOR ERROR!");
-  sensorError = true;
-  temperature = -1;
-  humidity = -1;
-  return;
+    Serial.println("SENSOR ERROR!");
+    sensorError = true;
+    temperature = -1;
+    humidity = -1;
+    return;
 #endif
   } else {
     sensorError = false;
@@ -180,13 +186,14 @@ void refreshScreen() {
 #ifdef LOG
   Serial.println("Refresh screen");
 #endif
-   dg->show(0, 0, seconds, 4);
-   dg->show(0, 1, temperature, 3);
-   dg->show(10, 1, humidity, 3);
-#ifdef LOG
-   Serial.println(dg->line1());
-   Serial.println(dg->line2());
-#endif
+   dg->show(14, 0, (seconds/60)%60,     2);
+   dg->show(11, 0, (seconds/3600)%24,   2);
+   dg->show( 5, 0, (seconds/(3600*24)), 4);
+   dg->show( 2, 1, temperature,         3);
+   dg->show(10, 1, humidity,            3);
+   dg->show(15, 1, progress[progressTick]);
+
+   progressTick = (progressTick+1)%PROGRESS_COUNT;
    dg->refresh();
 }
 
@@ -195,13 +202,13 @@ void loop() {
   if ( seconds - lastSeconds >= 2 ) {
    sensorTick();
    refreshLed();
-   refreshScreen();
+   refreshScreen();  
 #ifdef REPORT
    printReport();
 #endif
    lastSeconds = seconds;
   }
-  
+
   keyTick();  
   
   

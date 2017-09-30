@@ -18,40 +18,30 @@ DGMenu::DGMenu(uint8_t pin0,
 	       const char *line2) {
   lcd = new LiquidCrystal(pin0, pin1, pin2, pin3, pin4, pin5);
   lcd->begin(WIDTH,HEIGHT);
-  strncpy(row0, line1, WIDTH);
-  strncpy(row1, line2, WIDTH);
-}
-
-char *DGMenu::line1() {
-  return row0;
-}
-
-char *DGMenu::line2() {
-  return row1;
+  strncpy(row[0], line1, WIDTH);
+  strncpy(row[1], line2, WIDTH);
 }
 
 void DGMenu::refresh(void) {
   lcd->clear();
-  
+
   lcd->setCursor(0,0);
-  lcd->print(row0);  
+  lcd->print(row[0]);  
 
   lcd->setCursor(0,1);
-  lcd->print(row1);
+  lcd->print(row[1]);
 }
 
-void DGMenu::show(int column, int row, int number, int width) {
-  char *line;
+void DGMenu::show(int columnIndex, int rowIndex, int number, int width) {
   int i;
-  if ( row == 0 ) {
-    line = row0;
-  } else {
-    line = row1;
-  }
   for ( i = 0; i<width; i++ ) {
-    int index = column+width-i-1;
+    int index = columnIndex+width-i-1;
     if ( index >=0 && index < WIDTH )
-      line[index] = '0' + (number%10);
+      row[rowIndex][index] = '0' + (number%10);
     number = number / 10;
   }
+}
+
+void DGMenu::show(int columnIndex, int rowIndex, char ch) {
+  row[rowIndex][columnIndex] = ch;
 }

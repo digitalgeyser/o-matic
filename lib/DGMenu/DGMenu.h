@@ -22,15 +22,13 @@ class DGMenu {
   
   void refresh(void);
   
-  void show(int column, int row, int width, int number);
+  void show(int columnIndex, int rowIndex, int width, int number);
 
-  char *line1();
-  char *line2();
-  
+  void show(int columnIndex, int rowIndex, char ch);
+    
  private:
   LiquidCrystal *lcd;
-  char *row0 = "0123456789012345";
-  char *row1 = "5432109876543210";
+  char* row[2] = { "0123456789012345", "5432109876543210" };
   
 };
 
