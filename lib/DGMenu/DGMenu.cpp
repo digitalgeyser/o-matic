@@ -18,8 +18,7 @@ DGMenu::DGMenu(uint8_t pin0,
 	       const char *line2) {
   lcd = new LiquidCrystal(pin0, pin1, pin2, pin3, pin4, pin5);
   lcd->begin(WIDTH,HEIGHT);
-  strncpy(row[0], line1, WIDTH);
-  strncpy(row[1], line2, WIDTH);
+  screen(line1, line2);
 }
 
 void DGMenu::refresh(void) {
@@ -30,6 +29,16 @@ void DGMenu::refresh(void) {
 
   lcd->setCursor(0,1);
   lcd->print(row[1]);
+}
+
+void DGMenu::clear() {
+  memset(row[0], ' ', WIDTH);
+  memset(row[1], ' ', WIDTH);
+}
+
+void DGMenu::screen(const char *line1, const char *line2) {
+  strncpy(row[0], line1, WIDTH);
+  strncpy(row[1], line2, WIDTH);
 }
 
 void DGMenu::show(int columnIndex, int rowIndex, int number, int width) {

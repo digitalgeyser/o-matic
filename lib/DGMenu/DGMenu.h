@@ -25,7 +25,11 @@ class DGMenu {
   void show(int columnIndex, int rowIndex, int width, int number);
 
   void show(int columnIndex, int rowIndex, char ch);
-    
+
+  void screen(const char *line1, const char *line2);
+
+  void clear();
+  
  private:
   LiquidCrystal *lcd;
   char* row[2] = { "0123456789012345", "5432109876543210" };

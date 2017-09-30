@@ -46,18 +46,28 @@ int miliseconds = 0;
 long seconds = 0;
 long lastSeconds = 0;
 
+int lastKeyPressedSeconds = 0;
+
+byte thresholdHumidity = 90;
+byte thresholdTemperature = 50;
+
 boolean sensorError = false;
 byte temperature = 0;
 byte humidity = 0;
 int waterLevel = -1;
+char lastKeyDetected = 0;
+char previousKey = 0;
+
 
 #define PROGRESS_COUNT 2
 int progressTick = 0;
 const char* progress = "-+";
-
+const char* line1 = "Time: DDDd HH:MM";
+const char* line2 = "T:XXXF RH:XXX%  ";
 int fridgeState = 0;
 int diffuserState = 1;
 
+boolean menuState = 0;
 
 void setup() {
 
@@ -83,18 +93,18 @@ void setup() {
   digitalWrite(pinRelayDiffuser, diffuserState?LOW:HIGH);
   
   dg = new DGMenu(7,8,9,10,11,12, 
-                  "Time: DDDd HH:MM", 
-                  "T:XXXF RH:XXX%  ");
+                  line1, 
+                  line2);
   dg->refresh();
   cnt = 0;
 }
 
-char lastKeyDetected = 0;
-char previousKey = 0;
-
-void keyTick() {
+// Returns true if menu state has to change
+boolean keyTick() {
   char key = kp.getKey();
+  boolean change = false;
   if(key!=previousKey) {
+    change = true;
     previousKey = key;
     if ( key == 0 ) {
 #ifdef LOG
@@ -105,8 +115,23 @@ void keyTick() {
       Serial.print("Key:"); Serial.println(key);
 #endif
       lastKeyDetected = key;
+      menuState = 1;
+
+      switch(key) {
+      case '1': thresholdHumidity--; break;
+      case '2': thresholdHumidity++; break;
+      case '4': thresholdTemperature--; break;
+      case '5': thresholdTemperature++; break;
+      case '*': menuState = 1-menuState; break;
+      }
     }
   }
+  if ( (menuState) && (!change) && (seconds > 5 + lastKeyPressedSeconds) ) {
+    menuState = 0;
+    change = true;
+  }
+  lastKeyPressedSeconds = seconds;
+  return change;
 }
 
 // report: time, temperature, humidity, fridge status, vaporizer status, water level
@@ -161,13 +186,18 @@ void sensorTick() {
   Serial.print((int)humidity); Serial.println(" %");
 #endif
 
-  if ( humidity > 75 ) {
+  if ( temperature > thresholdTemperature ) {
     fridgeState = 1;
   } else {
     fridgeState = 0;
   }
+  if ( humidity < thresholdHumidity ) {
+    diffuserState = 1;
+  } else {
+    diffuserState = 0;
+  }
   digitalWrite(pinRelayFridge, fridgeState?LOW:HIGH );
-  digitalWrite(pinRelayDiffuser, fridgeState?LOW:HIGH );
+  digitalWrite(pinRelayDiffuser, diffuserState?LOW:HIGH );
 }
 
 void refreshLed() {
@@ -183,18 +213,35 @@ void refreshLed() {
 }
 
 void refreshScreen() {
+  if ( menuState ) {
+    refreshMenu();
+  } else {
+    refreshDefaultScreen();
+  }
+} 
+
+void refreshMenu() {
+  dg->screen("RH [1/2]:      %",
+             " T [4/5]:      F");
+  dg->show(12, 0, thresholdHumidity, 3);
+  dg->show(12, 1, thresholdTemperature, 3);
+  dg->refresh();
+}
+
+void refreshDefaultScreen() {
 #ifdef LOG
   Serial.println("Refresh screen");
 #endif
-   dg->show(14, 0, (seconds/60)%60,     2);
-   dg->show(11, 0, (seconds/3600)%24,   2);
-   dg->show( 5, 0, (seconds/(3600*24)), 4);
-   dg->show( 2, 1, temperature,         3);
-   dg->show(10, 1, humidity,            3);
-   dg->show(15, 1, progress[progressTick]);
+  dg->screen(line1, line2);
+  dg->show(14, 0, (seconds/60)%60,     2);
+  dg->show(11, 0, (seconds/3600)%24,   2);
+  dg->show( 5, 0, (seconds/(3600*24)), 4);
+  dg->show( 2, 1, temperature,         3);
+  dg->show(10, 1, humidity,            3);
+  dg->show(15, 1, progress[progressTick]);
 
-   progressTick = (progressTick+1)%PROGRESS_COUNT;
-   dg->refresh();
+  progressTick = (progressTick+1)%PROGRESS_COUNT;
+  dg->refresh();
 }
 
 void loop() {
@@ -209,7 +256,9 @@ void loop() {
    lastSeconds = seconds;
   }
 
-  keyTick();  
+  if(keyTick()) {
+    refreshScreen();  
+  }
   
   
   // DHT11 sampling rate is 1HZ.
