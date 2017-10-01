@@ -2,6 +2,7 @@
 
 #include <DGMenu.h>
 #include <DGUtil.h>
+#include <DGKey.h>
 
 #include <SimpleDHT.h>
 #include <Keypad.h>
@@ -9,7 +10,7 @@
 #define LOG 1
 #define REPORT 1
 
-// for DHT11, 
+// for DHT11,
 //      VCC: 5V or 3V
 //      GND: GND
 //      DATA: 2
@@ -38,7 +39,7 @@ byte rowPins[ROWS] = {A15, A14, A13, A12}; //connect to the row pinouts of the k
 byte colPins[COLS] = {A11, A10, A9, A8}; //connect to the column pinouts of the keypad
 
 //initialize an instance of class NewKeypad
-Keypad kp = Keypad( makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS); 
+Keypad kp = Keypad( makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS);
 
 char temperatureMode = 'C';
 
@@ -60,8 +61,8 @@ int waterLevel = -1;
 char lastKeyDetected = 0;
 char previousKey = 0;
 
-
 #define PROGRESS_COUNT 2
+
 int progressTick = 0;
 const char* progress = "-+";
 const char* line1 = "Time: DDDd HH:MM";
@@ -86,16 +87,16 @@ void setup() {
   pinMode(pinBLUE, OUTPUT);
 
   pinMode(pinWaterLevel, INPUT);
-  
+
   digitalWrite(pinRED, HIGH);
   digitalWrite(pinGREEN, LOW);
   digitalWrite(pinBLUE, LOW);
 
   digitalWrite(pinRelayFridge,fridgeState?LOW:HIGH);
   digitalWrite(pinRelayDiffuser, diffuserState?LOW:HIGH);
-  
-  dg = new DGMenu(7,8,9,10,11,12, 
-                  line1, 
+
+  dg = new DGMenu(7,8,9,10,11,12,
+                  line1,
                   line2);
   dg->refresh();
   cnt = 0;
@@ -169,7 +170,7 @@ void printReport() {
   Serial.print(lastKeyDetected);
   Serial.println("");
 }
- 
+
 void sensorTick() {
   // DHT11 read
   int retries = 3;
@@ -188,7 +189,7 @@ void sensorTick() {
   }
 
   waterLevel = analogRead(pinWaterLevel);
-    
+
   if ( !success ) {
     sensorError = true;
     temperature = -1;
@@ -197,7 +198,7 @@ void sensorTick() {
   } else {
     sensorError = false;
   }
-  
+
   if ( temperature > thresholdTemperature ) {
     fridgeState = 1;
   } else {
@@ -216,7 +217,7 @@ void refreshLed() {
   if ( sensorError ) {
     analogWrite(pinRED,   255 );
     analogWrite(pinGREEN,   0 );
-    analogWrite(pinBLUE,    0 );    
+    analogWrite(pinBLUE,    0 );
   } else {
     analogWrite(pinRED,     0 );
     analogWrite(pinGREEN, 255 );
@@ -230,7 +231,7 @@ void refreshScreen() {
   } else {
     refreshDefaultScreen();
   }
-} 
+}
 
 void refreshMenu() {
   dg->screen("RH [1/2]:      %",
@@ -267,7 +268,7 @@ void loop() {
   if ( seconds - lastSeconds >= 2 ) {
    sensorTick();
    refreshLed();
-   refreshScreen();  
+   refreshScreen();
 #ifdef REPORT
    printReport();
 #endif
@@ -275,10 +276,10 @@ void loop() {
   }
 
   if(keyTick()) {
-    refreshScreen();  
+    refreshScreen();
   }
-  
-  
+
+
   // DHT11 sampling rate is 1HZ.
   delay(10);
   miliseconds += 10;

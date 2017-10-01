@@ -14,8 +14,8 @@ DGMenu::DGMenu(uint8_t pin0,
                uint8_t pin3,
                uint8_t pin4,
                uint8_t pin5,
-	       const char *line1,
-	       const char *line2) {
+               const char *line1,
+               const char *line2) {
   lcd = new LiquidCrystal(pin0, pin1, pin2, pin3, pin4, pin5);
   lcd->begin(WIDTH,HEIGHT);
   screen(line1, line2);
