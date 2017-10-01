@@ -25,7 +25,7 @@ void DGMenu::refresh(void) {
   lcd->clear();
 
   lcd->setCursor(0,0);
-  lcd->print(row[0]);  
+  lcd->print(row[0]);
 
   lcd->setCursor(0,1);
   lcd->print(row[1]);
