@@ -39,6 +39,7 @@ byte colPins[COLS] = {A11, A10, A9, A8}; //connect to the column pinouts of the 
 //initialize an instance of class NewKeypad
 Keypad kp = Keypad( makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS); 
 
+char temperatureMode = 'C';
 
 int cnt;
 
@@ -49,7 +50,7 @@ long lastSeconds = 0;
 int lastKeyPressedSeconds = 0;
 
 byte thresholdHumidity = 90;
-byte thresholdTemperature = 50;
+byte thresholdTemperature = 10;
 
 boolean sensorError = false;
 byte temperature = 0;
@@ -63,7 +64,7 @@ char previousKey = 0;
 int progressTick = 0;
 const char* progress = "-+";
 const char* line1 = "Time: DDDd HH:MM";
-const char* line2 = "T:XXXF RH:XXX%  ";
+const char* line2 = "T:XXXC RH:XXX%  ";
 int fridgeState = 0;
 int diffuserState = 1;
 
@@ -123,6 +124,7 @@ boolean keyTick() {
       case '2': thresholdHumidity++; menuState = 1; break;
       case '4': thresholdTemperature--; menuState = 1; break;
       case '5': thresholdTemperature++; menuState = 1; break;
+      case 'C': toggleTemperatureMode(); menuState = 1; break;
       default: menuState = 1; break;
       }
     }
@@ -132,6 +134,10 @@ boolean keyTick() {
     change = true;
   }
   return change;
+}
+
+void toggleTemperatureMode() {
+  temperatureMode = ( temperatureMode == 'C' ? 'F': 'C' ); 
 }
 
 // report: time, temperature, humidity, fridge status, vaporizer status, water level
@@ -213,7 +219,8 @@ void refreshScreen() {
 
 void refreshMenu() {
   dg->screen("RH [1/2]:      %",
-             " T [4/5]:      F");
+             " T [4/5]:      C");
+  dg->show(15, 1, temperatureMode);
   dg->show(12, 0, thresholdHumidity, 3);
   dg->show(12, 1, thresholdTemperature, 3);
   dg->refresh();
@@ -227,6 +234,7 @@ void refreshDefaultScreen() {
   dg->show(14, 0, (seconds/60)%60,     2);
   dg->show(11, 0, (seconds/3600)%24,   2);
   dg->show( 5, 0, (seconds/(3600*24)), 4);
+  dg->show( 5, 1, temperatureMode);
   if ( sensorError ) {
     dg->show(0, 1, "Sensor error! ");
   } else {
