@@ -1,6 +1,7 @@
 // Copyright (c) Digital Geyser, 2017
 
 #include <DGMenu.h>
+#include <DGUtil.h>
 
 #include <SimpleDHT.h>
 #include <Keypad.h>
@@ -137,7 +138,18 @@ boolean keyTick() {
 }
 
 void toggleTemperatureMode() {
-  temperatureMode = ( temperatureMode == 'C' ? 'F': 'C' ); 
+  switch(temperatureMode) {
+    case 'F':
+      temperatureMode = 'C';
+      thresholdTemperature = DGUtil::temperatureFtoC(thresholdTemperature);
+      temperature = DGUtil::temperatureFtoC(thresholdTemperature);
+      break;
+    case 'C':
+      temperatureMode = 'F';
+      thresholdTemperature = DGUtil::temperatureCtoF(thresholdTemperature);
+      temperature = DGUtil::temperatureCtoF(thresholdTemperature);
+      break;
+  }
 }
 
 // report: time, temperature, humidity, fridge status, vaporizer status, water level
@@ -166,6 +178,9 @@ void sensorTick() {
     if (dht11.read(pinDHT11, &temperature, &humidity, NULL)) {
      retries--;
      success = 0;
+     if ( temperatureMode == 'F' ) {
+        temperature = DGUtil::temperatureCtoF(temperature);
+     }
    } else {
      success = 1;
      break;
