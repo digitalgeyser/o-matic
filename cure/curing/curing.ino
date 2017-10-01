@@ -115,22 +115,22 @@ boolean keyTick() {
       Serial.print("Key:"); Serial.println(key);
 #endif
       lastKeyDetected = key;
-      menuState = 1;
+      lastKeyPressedSeconds = seconds;
 
       switch(key) {
-      case '1': thresholdHumidity--; break;
-      case '2': thresholdHumidity++; break;
-      case '4': thresholdTemperature--; break;
-      case '5': thresholdTemperature++; break;
       case '*': menuState = 1-menuState; break;
+      case '1': thresholdHumidity--; menuState = 1; break;
+      case '2': thresholdHumidity++; menuState = 1; break;
+      case '4': thresholdTemperature--; menuState = 1; break;
+      case '5': thresholdTemperature++; menuState = 1; break;
+      default: menuState = 1; break;
       }
     }
   }
-  if ( (menuState) && (!change) && (seconds > 5 + lastKeyPressedSeconds) ) {
+  if ( (menuState) && (!change) && (seconds > 20 + lastKeyPressedSeconds) ) {
     menuState = 0;
     change = true;
   }
-  lastKeyPressedSeconds = seconds;
   return change;
 }
 
@@ -169,23 +169,14 @@ void sensorTick() {
   waterLevel = analogRead(pinWaterLevel);
     
   if ( !success ) {
-#ifdef LOG
-    Serial.println("SENSOR ERROR!");
     sensorError = true;
     temperature = -1;
     humidity = -1;
     return;
-#endif
   } else {
     sensorError = false;
   }
   
-#ifdef LOG  
-  Serial.print("Sensor data: ");
-  Serial.print((int)temperature); Serial.print(" *C, ");
-  Serial.print((int)humidity); Serial.println(" %");
-#endif
-
   if ( temperature > thresholdTemperature ) {
     fridgeState = 1;
   } else {
@@ -236,8 +227,12 @@ void refreshDefaultScreen() {
   dg->show(14, 0, (seconds/60)%60,     2);
   dg->show(11, 0, (seconds/3600)%24,   2);
   dg->show( 5, 0, (seconds/(3600*24)), 4);
-  dg->show( 2, 1, temperature,         3);
-  dg->show(10, 1, humidity,            3);
+  if ( sensorError ) {
+    dg->show(0, 1, "Sensor error! ");
+  } else {
+    dg->show( 2, 1, temperature,         3);
+    dg->show(10, 1, humidity,            3);
+  }
   dg->show(15, 1, progress[progressTick]);
 
   progressTick = (progressTick+1)%PROGRESS_COUNT;

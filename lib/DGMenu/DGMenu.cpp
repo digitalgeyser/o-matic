@@ -54,3 +54,7 @@ void DGMenu::show(int columnIndex, int rowIndex, int number, int width) {
 void DGMenu::show(int columnIndex, int rowIndex, char ch) {
   row[rowIndex][columnIndex] = ch;
 }
+
+void DGMenu::show(int columnIndex, int rowIndex, const char *text) {
+  strncpy(&(row[rowIndex][columnIndex]), text, strlen(text));
+}

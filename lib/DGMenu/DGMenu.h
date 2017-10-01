@@ -4,7 +4,6 @@
  * 2x16 LCD library.
  */
 
-// ensure this library description is only included once
 #ifndef DGMenu_h
 #define DGMenu_h
 
@@ -13,7 +12,6 @@
 #define HEIGHT 2
 
 class DGMenu {
-  // user-accessible "public" interface
  public:
   DGMenu(uint8_t pin0, uint8_t pin1,
 	 uint8_t pin2, uint8_t pin3,
@@ -26,6 +24,8 @@ class DGMenu {
 
   void show(int columnIndex, int rowIndex, char ch);
 
+  void show(int columnIndex, int rowIndex, const char *text);
+  
   void screen(const char *line1, const char *line2);
 
   void clear();
