@@ -6,7 +6,7 @@
 
 #include <SimpleDHT.h>
 
-#define LOG 1
+//#define LOG 1
 #define REPORT 1
 
 // for DHT11,
@@ -113,6 +113,7 @@ boolean keyTick() {
       case '4': thresholdTemperature--; menuState = 1; break;
       case '5': thresholdTemperature++; menuState = 1; break;
       case 'C': toggleTemperatureMode(); menuState = 1; break;
+      case 'D': dg->reinit(); break;
       default: menuState = 1; break;
       }
     }

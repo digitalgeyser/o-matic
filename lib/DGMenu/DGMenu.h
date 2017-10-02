@@ -15,7 +15,7 @@ class DGMenu {
   public:
     DGMenu(uint8_t pin0,
            uint8_t pin1,
-           uint8_t pin2, 
+           uint8_t pin2,
            uint8_t pin3,
            uint8_t pin4,
            uint8_t pin5,
@@ -33,6 +33,8 @@ class DGMenu {
   void screen(const char *line1, const char *line2);
 
   void clear();
+
+  void reinit();
 
  private:
   LiquidCrystal *lcd;

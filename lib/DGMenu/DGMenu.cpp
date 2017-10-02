@@ -31,6 +31,10 @@ void DGMenu::refresh(void) {
   lcd->print(row[1]);
 }
 
+void DGMenu::reinit() {
+  lcd->begin(WIDTH,HEIGHT);
+}
+
 void DGMenu::clear() {
   memset(row[0], ' ', WIDTH);
   memset(row[1], ' ', WIDTH);
