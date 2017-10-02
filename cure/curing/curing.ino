@@ -5,7 +5,6 @@
 #include <DGKey.h>
 
 #include <SimpleDHT.h>
-#include <Keypad.h>
 
 #define LOG 1
 #define REPORT 1
@@ -186,16 +185,28 @@ void sensorTick() {
     sensorError = false;
   }
 
-  if ( temperature > thresholdTemperature ) {
-    fridgeState = 1;
+  if ( fridgeState == 1 ) {
+    // fridge is on, turn it off if temperaturs is below threshold - 3.
+    if ( temperature < thresholdTemperature - 3 ) {
+      fridgeState = 0;
+    }
   } else {
-    fridgeState = 0;
+    // fridge is off, turn it on if temperature is above threshold + 3.
+    if ( temperature > thresholdTemperature + 3 ) {
+      fridgeState = 1;
+    }
   }
-  if ( humidity < thresholdHumidity ) {
-    diffuserState = 1;
+
+  if ( diffuserState == 1 ) {
+    if ( humidity > thresholdHumidity + 3 ) {
+      diffuserState = 0;
+    }
   } else {
-    diffuserState = 0;
+    if ( humidity < thresholdHumidity -3 ) {
+      diffuserState = 1;
+    }
   }
+  
   digitalWrite(pinRelayFridge, fridgeState?LOW:HIGH );
   digitalWrite(pinRelayDiffuser, diffuserState?LOW:HIGH );
 }
