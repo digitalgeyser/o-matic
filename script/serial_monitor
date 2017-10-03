@@ -2,12 +2,15 @@
 #
 # Script used for terminal monitoring.
 
-DEV=/dev/ttyACM0
-OUT=arduino.out
+DEV=/dev/ttyACM1
+OUT=o-matic.data
 
 echo "Initializing serial port $DEV"
 stty -F $DEV cs8 9600 ignbrk -brkint -icrnl -imaxbel -opost -onlcr -isig -icanon -iexten -echo -echoe -echok -echoctl -echoke noflsh -ixon -crtscts
 
 echo "Streaming data to $OUT"
-cat $DEV | tee -a $OUT
-
+while true; do
+	echo "#`date`" | tee -a $OUT
+	cat $DEV | tee -a $OUT
+	sleep 10
+done

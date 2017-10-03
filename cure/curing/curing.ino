@@ -156,6 +156,8 @@ void printReport() {
   Serial.print(", ");
   Serial.print(lastKeyDetected);
   Serial.println("");
+  Serial.flush();
+  
 }
 
 void sensorTick() {
