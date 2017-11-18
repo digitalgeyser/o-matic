@@ -33,6 +33,7 @@ int cnt;
 int miliseconds = 0;
 long seconds = 0;
 long lastSeconds = 0;
+long lastReinit = 0;
 
 int lastKeyPressedSeconds = 0;
 
@@ -227,6 +228,11 @@ void refreshLed() {
 }
 
 void refreshScreen() {
+
+  if ( seconds - lastReinit > 60 ) {
+    dg->reinit();
+    lastReinit = seconds;
+  }
   if ( menuState ) {
     refreshMenu();
   } else {
