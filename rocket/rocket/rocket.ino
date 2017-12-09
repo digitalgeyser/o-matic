@@ -1,9 +1,21 @@
-void setup() {
-  // put your setup code here, to run once:
+#include <SPI.h>
 
+#include <SD.h>
+
+void setup() {
+  pinMode(LED_BUILTIN, OUTPUT);
+}
+
+void ledOn() {
+  digitalWrite(LED_BUILTIN, HIGH);
+}
+void ledOff() {
+  digitalWrite(LED_BUILTIN, LOW);
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
-
+  ledOn();
+  delay(3000);
+  ledOff();
+  delay(2000);  
 }
