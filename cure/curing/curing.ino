@@ -6,7 +6,7 @@
 
 #include <SimpleDHT.h>
 
-//#define LOG 1
+#define LOG 1
 #define REPORT 1
 
 // for DHT11,
@@ -21,10 +21,12 @@ DGKey *dk;
 #define pinRED 2
 #define pinGREEN 3
 #define pinDHT11 4
-#define pinRelayFridge 5
 #define pinBLUE 6
-#define pinRelayDiffuser 13
-#define pinWaterLevel A0
+#define pinRelayHumidityUp A1
+#define pinRelayHumidityDown A0
+#define pinRelayFridge 5
+#define pinRelayUnused 13
+
 
 char temperatureMode = 'C';
 
@@ -43,6 +45,7 @@ byte thresholdTemperature = 10;
 boolean sensorError = false;
 byte temperature = 0;
 byte humidity = 0;
+int humidityState = 0;
 int waterLevel = -1;
 char lastKeyDetected = 0;
 char previousKey = 0;
@@ -54,7 +57,6 @@ const char* progress = "-+";
 const char* line1 = "Time: DDDd HH:MM";
 const char* line2 = "T:XXXC RH:XXX%  ";
 int fridgeState = 0;
-int diffuserState = 1;
 
 boolean menuState = 0;
 
@@ -66,21 +68,22 @@ void setup() {
 #endif
 
   pinMode(pinRelayFridge, OUTPUT);
-  pinMode(pinRelayDiffuser, OUTPUT);
+  pinMode(pinRelayUnused, OUTPUT);
+  pinMode(pinRelayHumidityUp, OUTPUT);
+  pinMode(pinRelayHumidityDown, OUTPUT);
 
   pinMode(pinRED, OUTPUT);
   pinMode(pinGREEN, OUTPUT);
   pinMode(pinBLUE, OUTPUT);
-
-  pinMode(pinWaterLevel, INPUT);
 
   digitalWrite(pinRED, HIGH);
   digitalWrite(pinGREEN, LOW);
   digitalWrite(pinBLUE, LOW);
 
   digitalWrite(pinRelayFridge,fridgeState?LOW:HIGH);
-  digitalWrite(pinRelayDiffuser, diffuserState?LOW:HIGH);
-
+  digitalWrite(pinRelayHumidityUp, LOW);
+  digitalWrite(pinRelayHumidityDown, LOW);
+  
   dk = new DGKey();
   dg = new DGMenu(7,8,9,10,11,12,
                   line1,
@@ -143,6 +146,8 @@ void toggleTemperatureMode() {
 
 // report: time, temperature, humidity, fridge status, vaporizer status, water level
 void printReport() {
+  Serial.print(sensorError);
+  Serial.print(", ");
   Serial.print(seconds);
   Serial.print(", ");
   Serial.print(temperature);
@@ -151,9 +156,7 @@ void printReport() {
   Serial.print(", ");
   Serial.print(fridgeState);
   Serial.print(", ");
-  Serial.print(diffuserState);
-  Serial.print(", ");
-  Serial.print(waterLevel);
+  Serial.print(humidityState);
   Serial.print(", ");
   Serial.print(lastKeyDetected);
   Serial.println("");
@@ -164,7 +167,7 @@ void printReport() {
 void sensorTick() {
   // DHT11 read
   int retries = 3;
-  int success;
+  int success;  
   while(retries>0) {
     if (dht11.read(pinDHT11, &temperature, &humidity, NULL)) {
      retries--;
@@ -177,8 +180,6 @@ void sensorTick() {
      break;
    }
   }
-
-  waterLevel = analogRead(pinWaterLevel);
 
   if ( !success ) {
     sensorError = true;
@@ -201,18 +202,18 @@ void sensorTick() {
     }
   }
 
-  if ( diffuserState == 1 ) {
-    if ( humidity > thresholdHumidity + 3 ) {
-      diffuserState = 0;
-    }
+  if ( humidity > thresholdHumidity + 3 ) {
+    humidityState = 1;
+  } else if ( humidity < thresholdHumidity -3 ) {
+    humidityState = -1;
   } else {
-    if ( humidity < thresholdHumidity -3 ) {
-      diffuserState = 1;
-    }
+    humidityState = 0;
   }
   
+  
   digitalWrite(pinRelayFridge, fridgeState?LOW:HIGH );
-  digitalWrite(pinRelayDiffuser, diffuserState?LOW:HIGH );
+  digitalWrite(pinRelayHumidityDown, humidityState>0?LOW:HIGH );
+  digitalWrite(pinRelayHumidityUp, humidityState<0?LOW:HIGH );
 }
 
 void refreshLed() {
@@ -256,7 +257,7 @@ void refreshDefaultScreen() {
   dg->screen(line1, line2);
   dg->show(14, 0, (seconds/60)%60,     2);
   dg->show(11, 0, (seconds/3600)%24,   2);
-  dg->show( 5, 0, (seconds/(3600*24)), 4);
+  dg->show( 5, 0, (seconds/3600)/24,   4);
   dg->show( 5, 1, temperatureMode);
   if ( sensorError ) {
     dg->show(0, 1, "Sensor error! ");
