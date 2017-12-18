@@ -6,7 +6,7 @@
 
 #include <SimpleDHT.h>
 
-#define LOG 1
+//#define LOG 1
 #define REPORT 1
 
 // for DHT11,
@@ -22,10 +22,13 @@ DGKey *dk;
 #define pinGREEN 3
 #define pinDHT11 4
 #define pinBLUE 6
-#define pinRelayHumidityUp A1
-#define pinRelayHumidityDown A0
-#define pinRelayFridge 5
-#define pinRelayUnused 13
+#define pinRelayHumidityUp A0
+#define pinRelayHumidityDown A1
+
+#define pinRelayPolarity0 A3
+#define pinRelayPolarity1 A4
+
+#define PROGRESS_COUNT 2
 
 
 char temperatureMode = 'C';
@@ -50,13 +53,11 @@ int waterLevel = -1;
 char lastKeyDetected = 0;
 char previousKey = 0;
 
-#define PROGRESS_COUNT 2
-
 int progressTick = 0;
-const char* progress = "-+";
+const char* progress = ": ";
 const char* line1 = "Time: DDDd HH:MM";
 const char* line2 = "T:XXXC RH:XXX%  ";
-int fridgeState = 0;
+int temperatureGradient = 0;
 
 boolean menuState = 0;
 
@@ -67,10 +68,10 @@ void setup() {
   Serial.println("Startup.");
 #endif
 
-  pinMode(pinRelayFridge, OUTPUT);
-  pinMode(pinRelayUnused, OUTPUT);
   pinMode(pinRelayHumidityUp, OUTPUT);
   pinMode(pinRelayHumidityDown, OUTPUT);
+  pinMode(pinRelayPolarity0, OUTPUT);
+  pinMode(pinRelayPolarity1, OUTPUT);
 
   pinMode(pinRED, OUTPUT);
   pinMode(pinGREEN, OUTPUT);
@@ -80,16 +81,31 @@ void setup() {
   digitalWrite(pinGREEN, LOW);
   digitalWrite(pinBLUE, LOW);
 
-  digitalWrite(pinRelayFridge,fridgeState?LOW:HIGH);
   digitalWrite(pinRelayHumidityUp, LOW);
   digitalWrite(pinRelayHumidityDown, LOW);
   
   dk = new DGKey();
-  dg = new DGMenu(7,8,9,10,11,12,
-                  line1,
-                  line2);
+  dg = new DGMenu(7,8,9,10,11,12, line1, line2);
   dg->refresh();
   cnt = 0;
+  setFridge();
+}
+
+void setFridge() {
+  switch(temperatureGradient) {
+    case -1:
+      digitalWrite(pinRelayPolarity0,HIGH);
+      digitalWrite(pinRelayPolarity1,LOW);
+      break;
+    case 0:
+      digitalWrite(pinRelayPolarity0,LOW);
+      digitalWrite(pinRelayPolarity1,LOW);
+      break;
+    case 1:  
+      digitalWrite(pinRelayPolarity0,LOW);
+      digitalWrite(pinRelayPolarity1,HIGH);
+      break;
+  }
 }
 
 // Returns true if menu state has to change
@@ -154,7 +170,7 @@ void printReport() {
   Serial.print(", ");
   Serial.print(humidity);
   Serial.print(", ");
-  Serial.print(fridgeState);
+  Serial.print(temperatureGradient);
   Serial.print(", ");
   Serial.print(humidityState);
   Serial.print(", ");
@@ -190,28 +206,23 @@ void sensorTick() {
     sensorError = false;
   }
 
-  if ( fridgeState == 1 ) {
-    // fridge is on, turn it off if temperaturs is below threshold - 3.
-    if ( temperature < thresholdTemperature - 3 ) {
-      fridgeState = 0;
-    }
+  if ( temperature < thresholdTemperature - 2 ) {
+    temperatureGradient = 1;
+  } else if ( temperature > thresholdTemperature + 2 ) {
+    temperatureGradient = -1;
   } else {
-    // fridge is off, turn it on if temperature is above threshold + 3.
-    if ( temperature > thresholdTemperature + 3 ) {
-      fridgeState = 1;
-    }
+    temperatureGradient = 0;
   }
 
-  if ( humidity > thresholdHumidity + 3 ) {
+  if ( humidity > thresholdHumidity + 2 ) {
     humidityState = 1;
-  } else if ( humidity < thresholdHumidity -3 ) {
+  } else if ( humidity < thresholdHumidity - 2 ) {
     humidityState = -1;
   } else {
     humidityState = 0;
   }
   
-  
-  digitalWrite(pinRelayFridge, fridgeState?LOW:HIGH );
+  setFridge();  
   digitalWrite(pinRelayHumidityDown, humidityState>0?LOW:HIGH );
   digitalWrite(pinRelayHumidityUp, humidityState<0?LOW:HIGH );
 }
@@ -265,9 +276,13 @@ void refreshDefaultScreen() {
     dg->show( 2, 1, temperature,         3);
     dg->show(10, 1, humidity,            3);
   }
-  dg->show(15, 1, progress[progressTick]);
 
+  // Progress tick at the space between hours/minutes.
+  dg->show(13, 0, progress[progressTick]);
   progressTick = (progressTick+1)%PROGRESS_COUNT;
+
+  // + or - at 15 for fridge state
+  dg->show(15, 1, (temperatureGradient==1?'+':( temperatureGradient == -1 ? '-' : ' ') ) );
   dg->refresh();
 }
 

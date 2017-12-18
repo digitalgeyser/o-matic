@@ -38,7 +38,7 @@ class DGMenu {
 
  private:
   LiquidCrystal *lcd;
-  char* row[2] = { "0123456789012345", "5432109876543210" };
+  char row[2][16];
 
 };
 
