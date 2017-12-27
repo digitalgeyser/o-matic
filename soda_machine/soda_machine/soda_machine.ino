@@ -9,6 +9,81 @@
 // Arguments: DATA, CLK, CS, count
 LedControl lc = LedControl(12,10,11,1);
 
+byte SODA[][8]=
+          {{ B01111110,
+             B10000001,
+             B00000001,
+             B00001110,
+             B01110000,
+             B10000000,
+             B10000001,
+             B01111110},
+            
+            {B01111110,
+             B10000001,
+             B10000001,
+             B10000001,
+             B10000001,
+             B10000001,
+             B10000001,
+             B01111110},
+            
+            {B00111111,
+             B01000001,
+             B10000001,
+             B10000001,
+             B10000001,
+             B10000001,
+             B01000001,
+             B00111111},
+            
+            {B00011000,
+             B00100100,
+             B01000010,
+             B10000001,
+             B11111111,
+             B10000001,
+             B10000001,
+             B10000001}};
+
+byte soda[][8]=
+          {{ B00000000,
+             B00000000,
+             B00000000,
+             B00111100,
+             B00000100,
+             B00111100,
+             B00100000,
+             B00111100},
+            
+            {B00000000,
+             B00000000,
+             B00000000,
+             B00111100,
+             B00100100,
+             B00100100,
+             B00100100,
+             B00111100},
+            
+            {B00100000,
+             B00100000,
+             B00100000,
+             B00111000,
+             B00100100,
+             B00100100,
+             B00100100,
+             B00111000},
+            
+            {B00000000,
+             B00000000,
+             B00100000,
+             B00111000,
+             B00100100,
+             B00100100,
+             B00100100,
+             B00111000}};
+            
+
 void setup() {
   pinMode(7, OUTPUT);
     /*
@@ -24,13 +99,9 @@ void setup() {
 }
 
 void loop() {
-  delay(500);
-  digitalWrite(7, HIGH);
-  delay(500);
-  digitalWrite(7, LOW);
-  writeArduinoOnMatrix();
-  single(50, true);
-  single(50, false);
+  writeLetters(soda);
+  single(10, true);
+  single(10, false);
 }
 //We always have to include the library
 #include "LedControl.h"
@@ -43,97 +114,19 @@ unsigned long delaytime=500;
  word "Arduino" one after the other on the matrix. 
  (you need at least 5x7 leds to see the whole chars)
  */
-void writeArduinoOnMatrix() {
+void writeLetters(byte letters[][8]) {
   int i, j;
-  /* here is the data for the characters */
-  byte a[][5]={{B01111110,
-             B10001000,
-             B10001000,
-             B10001000,
-             B01111110},
-            {B00111110,
-             B00010000,
-             B00100000,
-             B00100000,
-             B00010000},
-            {B00011100,
-             B00100010,
-             B00100010,
-             B00010010,
-             B11111110},
-            {B00111100,
-             B00000010,
-             B00000010,
-             B00000100,
-             B00111110},
-            {B00000000,
-             B00100010,
-             B10111110,
-             B00000010,
-             B00000000},
-            {B00111110,
-             B00010000,
-             B00100000,
-             B00100000,
-             B00011110},
-            {B00011100,
-             B00100010,
-             B00100010,
-             B00100010,
-             B00011100}};
 
-  for ( int i=0; i<7; i++ ) {
-    for ( int j=0; j<5; j++ ) {
-      lc.setColumn(0,j,a[i][j]);      
+  for ( int i=0; i<4; i++ ) {
+    for ( int j=0; j<8; j++ ) {
+      lc.setColumn(0,j,letters[i][j]);      
     }
     delay(delaytime);    
   }
-  for ( int j=0; j<5; j++ ) {
+  for ( int j=0; j<8; j++ ) {
     lc.setColumn(0,j,0);      
   }
   delay(delaytime);
-}
-
-/*
-  This function lights up a some Leds in a row.
- The pattern will be repeated on every row.
- The pattern will blink along with the row-number.
- row number 4 (index==3) will blink 4 times etc.
- */
-void rows() {
-  for(int row=0;row<8;row++) {
-    delay(delaytime);
-    lc.setRow(0,row,B10100000);
-    delay(delaytime);
-    lc.setRow(0,row,(byte)0);
-    for(int i=0;i<row;i++) {
-      delay(delaytime);
-      lc.setRow(0,row,B10100000);
-      delay(delaytime);
-      lc.setRow(0,row,(byte)0);
-    }
-  }
-}
-
-/*
-  This function lights up a some Leds in a column.
- The pattern will be repeated on every column.
- The pattern will blink along with the column-number.
- column number 4 (index==3) will blink 4 times etc.
- */
-void columns() {
-  for(int col=0;col<8;col++) {
-    delay(delaytime);
-    lc.setColumn(0,col,B10100000);
-    delay(delaytime);
-    lc.setColumn(0,col,(byte)0);
-    for(int i=0;i<col;i++) {
-      delay(delaytime);
-      lc.setColumn(0,col,B10100000);
-      delay(delaytime);
-      lc.setColumn(0,col,(byte)0);
-    }
-  }
 }
 
 /* 
