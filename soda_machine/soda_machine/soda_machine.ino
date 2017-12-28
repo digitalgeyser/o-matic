@@ -165,19 +165,55 @@ void single(int delayMs, bool flag) {
   }
 }
 
-void spiralXY(int n, int *x, int *y) {
-  *x = n / 8;
-  *y = n % 8;
+// call spiral(NULL, NULL) to reset.
+void do_spiral(int *x, int *y) {
+  static int n, lastX, lastY;
+  static int dir, step;
+
+  if ( x == NULL || y == NULL ) {
+    n = 0;
+    step = 0;
+    return;
+  }
+
+  if ( step == 0 && n == 0 ) {
+    // First step.
+    lastX = 0;
+    lastY = 0;
+    dir = 0;
+    step = 1;
+  } else {
+
+    // Make a move
+    switch(dir) {
+    case 0: lastX++; break;
+    case 1: lastY++; break;
+    case 2: lastX--; break;
+    case 3: lastY--; break;
+    }
+    step--;
+
+    if ( step == 0 ) {
+      dir = (dir+1)%4;
+      n++;
+      step = n/2 + 1;
+    }
+  }
+
+  *x = lastX;
+  *y = lastY;
 }
 
 void spiral(int delayMs, boolean on) {
-  int x, y;
+  do_spiral(NULL, NULL);
   for ( int n = 0; n<64; n++ ) {
-    spiralXY(n, &x, &y);
-    lc.setLed(0, x, y, on);
+    int x, y;
+    do_spiral(&x, &y);
+    lc.setLed(0, 5+x, 5+y, on);
     delay(delayMs);
   }
 }
+
 
 void lines(int mask, int scanCount, int delayMs) {
   for ( int i=0; i<scanCount; i++) {
