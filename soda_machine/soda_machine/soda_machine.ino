@@ -9,6 +9,17 @@
 // Arguments: DATA, CLK, CS, count
 LedControl lc = LedControl(12,10,11,1);
 
+byte smiley[8] = {
+  B00000000,
+  B00000000,
+  B00000000,
+  B00000000,
+  B00000000,
+  B00000000,
+  B00000000,
+  B00000000
+};
+
 byte SODA[][8]=
           {{ B01111110,
              B10000001,
@@ -100,9 +111,20 @@ void setup() {
 
 void loop() {
   writeLetters(soda);
-  single(10, true);
-  single(10, false);
+
+  spiral(10, true);
+  spiral(10, false);
+  
+  single(5, true);
+  single(5, false);
+  single(5, true);
+  single(5, false);
+
+  lines(1, 3, 35);
+  lines(2, 3, 35);
+  lines(3, 3, 35);
 }
+
 //We always have to include the library
 #include "LedControl.h"
 
@@ -139,6 +161,46 @@ void single(int delayMs, bool flag) {
     for(int col=0;col<8;col++) {
       delay(delayMs);
       lc.setLed(0,row,col,flag);
+    }
+  }
+}
+
+void spiralXY(int n, int *x, int *y) {
+  *x = n / 8;
+  *y = n % 8;
+}
+
+void spiral(int delayMs, boolean on) {
+  int x, y;
+  for ( int n = 0; n<64; n++ ) {
+    spiralXY(n, &x, &y);
+    lc.setLed(0, x, y, on);
+    delay(delayMs);
+  }
+}
+
+void lines(int mask, int scanCount, int delayMs) {
+  for ( int i=0; i<scanCount; i++) {
+    
+    for ( int row = 0; row<8; row++) {
+    
+      if ( mask & 1 ) lc.setRow(0, row, B11111111);
+      if ( mask & 2 ) lc.setColumn(0, row, B11111111);
+      
+      delay(delayMs);
+
+      if ( mask & 1 ) lc.setRow(0, row, B00000000);
+      if ( mask & 2 ) lc.setColumn(0, row, B00000000);
+
+    }
+  
+    for ( int row = 0; row<8; row++) {
+    
+      if ( mask & 1 ) lc.setRow(0, 7-row, B11111111);
+      if ( mask & 2 ) lc.setColumn(0, 7-row, B11111111);
+      delay(delayMs);
+      if ( mask & 1 ) lc.setRow(0, 7-row, B00000000);
+      if ( mask & 2 ) lc.setColumn(0, 7-row, B00000000);
     }
   }
 }
