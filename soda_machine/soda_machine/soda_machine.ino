@@ -20,6 +20,46 @@ byte smiley[8] = {
   B00000000
 };
 
+#define CIRCLE_COUNT 4
+byte CIRCLE[][8]=
+{
+  { B00000000,
+    B00000000,
+    B00000000,
+    B00011000,
+    B00011000,
+    B00000000,
+    B00000000,
+    B00000000 },
+
+  { B00000000,
+    B00000000,
+    B00011000,
+    B00111100,
+    B00111100,
+    B00011000,
+    B00000000,
+    B00000000 },
+  
+  { B00000000,
+    B00111100,
+    B00111110,
+    B01111110,
+    B01111110,
+    B01111110,
+    B00111100,
+    B00000000 },
+  
+  { B00111100,
+    B01111110,
+    B11111111,
+    B11111111,
+    B11111111,
+    B11111111,
+    B01111110,
+    B00111100 },
+  
+};
 byte SODA[][8]=
           {{ B01111110,
              B10000001,
@@ -112,8 +152,10 @@ void setup() {
 void loop() {
   writeLetters(soda);
 
-  spiral(10, true);
-  spiral(10, false);
+  spiral(20, true);
+  spiral(20, false);
+
+  circle(20, 5);
   
   single(5, true);
   single(5, false);
@@ -131,6 +173,17 @@ void loop() {
 /* we always wait a bit between updates of the display */
 unsigned long delaytime=500;
 
+void drawPattern(byte pattern[8]) {
+  for ( int j=0; j<8; j++ ) {
+    lc.setColumn(0,j,pattern[j]);      
+  }  
+}
+
+void clear() {
+  for ( int j=0; j<8; j++ ) {
+    lc.setColumn(0,j,0);      
+  }  
+}
 /*
  This method will display the characters for the
  word "Arduino" one after the other on the matrix. 
@@ -145,9 +198,7 @@ void writeLetters(byte letters[][8]) {
     }
     delay(delaytime);    
   }
-  for ( int j=0; j<8; j++ ) {
-    lc.setColumn(0,j,0);      
-  }
+  clear();
   delay(delaytime);
 }
 
@@ -163,6 +214,16 @@ void single(int delayMs, bool flag) {
       lc.setLed(0,row,col,flag);
     }
   }
+}
+
+void circle(int delayMs, int count) {
+  for ( int i=0; i<count; i++ ) {
+    for ( int j=0; j<CIRCLE_COUNT; j++ ) {
+      drawPattern(CIRCLE[j]);
+      delay(delayMs);
+    }
+  }
+  clear();
 }
 
 // call spiral(NULL, NULL) to reset.
@@ -209,7 +270,7 @@ void spiral(int delayMs, boolean on) {
   for ( int n = 0; n<64; n++ ) {
     int x, y;
     do_spiral(&x, &y);
-    lc.setLed(0, 5+x, 5+y, on);
+    lc.setLed(0, 3+x, 3+y, on);
     delay(delayMs);
   }
 }
