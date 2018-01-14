@@ -6,6 +6,14 @@
  We have only a single MAX72XX.
  */
 
+// Rotary
+const int PinCLK=2;   // Generating interrupts using CLK signal
+const int PinDT=3;    // Reading DT signal
+const int PinSW=4;    // Reading Push Button switch
+
+volatile boolean TurnDetected;  // need volatile for Interrupts
+volatile boolean rotationdirection;  // CW or CCW rotation
+
 // Arguments: DATA, CLK, CS, count
 LedControl lc = LedControl(12,10,11,1);
 
@@ -134,9 +142,23 @@ byte soda[][8]=
              B00100100,
              B00111000}};
             
+void isr ()  {
+  delay(4);  // delay for Debouncing
+  if (digitalRead(PinCLK))
+    rotationdirection= digitalRead(PinDT);
+  else
+    rotationdirection= !digitalRead(PinDT);
+  TurnDetected = true;
+}
 
 void setup() {
   pinMode(7, OUTPUT);
+  pinMode(PinCLK,INPUT);
+  pinMode(PinDT,INPUT);  
+  pinMode(PinSW,INPUT);
+  digitalWrite(PinSW, HIGH); // Pull-Up resistor for switch
+  attachInterrupt (0,isr,FALLING); // interrupt 0 always connected to pin 2 on Arduino UNO
+
     /*
    The MAX72XX is in power-saving mode on startup,
    we have to do a wakeup call
@@ -149,22 +171,45 @@ void setup() {
 
 }
 
+void checkRotary() {
+  bool sw = (!digitalRead(PinSW));
+  if (sw || TurnDetected ) {
+    lc.setLed(0,0,0,sw);
+    lc.setLed(0,0,rotationdirection?1:2,TurnDetected);
+    TurnDetected = false;
+    delay(500);
+  }
+}
+
 void loop() {
+  checkRotary();
+  
   writeLetters(soda);
+  checkRotary();
 
   spiral(20, true);
+  checkRotary();
   spiral(20, false);
+  checkRotary();
 
   circle(20, 5);
+  checkRotary();
   
   single(5, true);
+  checkRotary();
   single(5, false);
+  checkRotary();
   single(5, true);
+  checkRotary();
   single(5, false);
+  checkRotary();
 
   lines(1, 3, 35);
+  checkRotary();
   lines(2, 3, 35);
+  checkRotary();
   lines(3, 3, 35);
+  checkRotary();
 }
 
 //We always have to include the library

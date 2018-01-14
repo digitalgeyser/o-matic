@@ -1,183 +1,199 @@
-// Copyright (c) Digital Geyser, 2017
+// (c) Digital Geyser, 2018
 
-#include <DGMenu.h>
-#include <DGUtil.h>
-#include <DGKey.h>
-
+#include <Elegoo_GFX.h>    // Core graphics library
+#include <Elegoo_TFTLCD.h> // Hardware-specific library
+#include <TouchScreen.h>
 #include <SimpleDHT.h>
+#include <DGUtil.h>
 
-//#define LOG 1
-#define REPORT 1
+#if defined(__SAM3X8E__)
+    #undef __FlashStringHelper::F(string_literal)
+    #define F(string_literal) string_literal
+#endif
 
-// for DHT11,
-//      VCC: 5V or 3V
-//      GND: GND
-//      DATA: 2
 
+#define YP A3  // must be an analog pin, use "An" notation!
+#define XM A2  // must be an analog pin, use "An" notation!
+#define YM 9   // can be a digital pin
+#define XP 8   // can be a digital pin
+
+//Touch For New ILI9341 TP
+#define TS_MINX 120
+#define TS_MAXX 900
+
+#define TS_MINY 70
+#define TS_MAXY 920
+
+// For better pressure precision, we need to know the resistance
+// between X+ and X- Use any multimeter to read it
+// For the one we're using, its 300 ohms across the X plate
+TouchScreen ts = TouchScreen(XP, YP, XM, YM, 300);
+
+#define LCD_CS A3
+#define LCD_CD A2
+#define LCD_WR A1
+#define LCD_RD A0
+// optional
+#define LCD_RESET A4
+
+// Assign human-readable names to some common 16-bit color values:
+#define  BLACK   0x0000
+#define BLUE    0x001F
+#define RED     0xF800
+#define GREEN   0x07E0
+#define CYAN    0x07FF
+#define MAGENTA 0xF81F
+#define YELLOW  0xFFE0
+#define WHITE   0xFFFF
+
+
+#define POLARITY_RELAY_1 31
+#define POLARITY_RELAY_2 33
+
+#define TEMPERATURE_HUMIDITY_SENSOR_PIN 35
+
+#define PUMP_TRANSISTOR_PIN 44
+
+Elegoo_TFTLCD tft(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
 SimpleDHT11 dht11;
-DGMenu *dg;
-DGKey *dk;
 
-#define pinRED 2
-#define pinGREEN 3
-#define pinDHT11 4
-#define pinBLUE 6
-#define pinRelayHumidityUp A0
-#define pinRelayHumidityDown A1
+#define OFF 0
+#define COOLING 1
+#define HEATING 2
+int coolingState = -1; // OFF, COOLING, HEATING
 
-#define pinRelayPolarity0 A3
-#define pinRelayPolarity1 A4
+void setCoolingState(int state) {
+  if ( state == coolingState ) return;
+  switch(state) {
+    case OFF: 
+      digitalWrite(POLARITY_RELAY_1, HIGH);  
+      digitalWrite(POLARITY_RELAY_2, HIGH);  
+      Serial.println(F("Off"));
+      break;
+    case COOLING:
+      digitalWrite(POLARITY_RELAY_1, HIGH);  
+      digitalWrite(POLARITY_RELAY_2, LOW);  
+      Serial.println(F("Cool"));
+      break;
+    case HEATING:
+      digitalWrite(POLARITY_RELAY_1, LOW);  
+      digitalWrite(POLARITY_RELAY_2, HIGH);  
+      Serial.println(F("Heat"));
+      break;
+  }
+  coolingState = state;
+  redrawCoolingState(160, 100);
+}
 
-#define PROGRESS_COUNT 2
-
-
-char temperatureMode = 'C';
-
-int cnt;
-
-int miliseconds = 0;
-long seconds = 0;
-long lastSeconds = 0;
-long lastReinit = 0;
-
-int lastKeyPressedSeconds = 0;
-
-byte thresholdHumidity = 90;
-byte thresholdTemperature = 10;
-
-boolean sensorError = false;
+#define BOXSIZE 80
+#define PENRADIUS 3
+int oldcolor, currentcolor;
 byte temperature = 0;
 byte humidity = 0;
-int humidityState = 0;
-int waterLevel = -1;
-char lastKeyDetected = 0;
-char previousKey = 0;
+char temperatureMode = 'C';
+boolean sensorError = false;
 
-int progressTick = 0;
-const char* progress = ": ";
-const char* line1 = "Time: DDDd HH:MM";
-const char* line2 = "T:XXXC RH:XXX%  ";
-int temperatureGradient = 0;
-
-boolean menuState = 0;
-
-void setup() {
-
-#if defined(LOG) || defined(REPORT)
+void setup(void) {
   Serial.begin(9600);
-  Serial.println("Startup.");
-#endif
-
-  pinMode(pinRelayHumidityUp, OUTPUT);
-  pinMode(pinRelayHumidityDown, OUTPUT);
-  pinMode(pinRelayPolarity0, OUTPUT);
-  pinMode(pinRelayPolarity1, OUTPUT);
-
-  pinMode(pinRED, OUTPUT);
-  pinMode(pinGREEN, OUTPUT);
-  pinMode(pinBLUE, OUTPUT);
-
-  digitalWrite(pinRED, HIGH);
-  digitalWrite(pinGREEN, LOW);
-  digitalWrite(pinBLUE, LOW);
-
-  digitalWrite(pinRelayHumidityUp, LOW);
-  digitalWrite(pinRelayHumidityDown, LOW);
+  Serial.println(F("Paint!"));
   
-  dk = new DGKey();
-  dg = new DGMenu(7,8,9,10,11,12, line1, line2);
-  dg->refresh();
-  cnt = 0;
-  setFridge();
-}
-
-void setFridge() {
-  switch(temperatureGradient) {
-    case -1:
-      digitalWrite(pinRelayPolarity0,HIGH);
-      digitalWrite(pinRelayPolarity1,LOW);
-      break;
-    case 0:
-      digitalWrite(pinRelayPolarity0,LOW);
-      digitalWrite(pinRelayPolarity1,LOW);
-      break;
-    case 1:  
-      digitalWrite(pinRelayPolarity0,LOW);
-      digitalWrite(pinRelayPolarity1,HIGH);
-      break;
-  }
-}
-
-// Returns true if menu state has to change
-boolean keyTick() {
-  char key = dk->getKey();
-  boolean change = false;
-  if(key!=previousKey) {
-    change = true;
-    previousKey = key;
-    if ( key == 0 ) {
-#ifdef LOG
-      Serial.println("Key off.");
-#endif
-    } else {
-#ifdef LOG
-      Serial.print("Key:"); Serial.println(key);
-#endif
-      lastKeyDetected = key;
-      lastKeyPressedSeconds = seconds;
-
-      switch(key) {
-      case '*': menuState = 1-menuState; break;
-      case '1': thresholdHumidity--; menuState = 1; break;
-      case '2': thresholdHumidity++; menuState = 1; break;
-      case '4': thresholdTemperature--; menuState = 1; break;
-      case '5': thresholdTemperature++; menuState = 1; break;
-      case 'C': toggleTemperatureMode(); menuState = 1; break;
-      case 'D': dg->reinit(); break;
-      default: menuState = 1; break;
-      }
-    }
-  }
-  if ( (menuState) && (!change) && (seconds > 20 + lastKeyPressedSeconds) ) {
-    menuState = 0;
-    change = true;
-  }
-  return change;
-}
-
-void toggleTemperatureMode() {
-  switch(temperatureMode) {
-    case 'F':
-      temperatureMode = 'C';
-      thresholdTemperature = DGUtil::temperatureFtoC(thresholdTemperature);
-      temperature = DGUtil::temperatureFtoC(thresholdTemperature);
-      break;
-    case 'C':
-      temperatureMode = 'F';
-      thresholdTemperature = DGUtil::temperatureCtoF(thresholdTemperature);
-      temperature = DGUtil::temperatureCtoF(thresholdTemperature);
-      break;
-  }
-}
-
-// report: time, temperature, humidity, fridge status, vaporizer status, water level
-void printReport() {
-  Serial.print(sensorError);
-  Serial.print(", ");
-  Serial.print(seconds);
-  Serial.print(", ");
-  Serial.print(temperature);
-  Serial.print(", ");
-  Serial.print(humidity);
-  Serial.print(", ");
-  Serial.print(temperatureGradient);
-  Serial.print(", ");
-  Serial.print(humidityState);
-  Serial.print(", ");
-  Serial.print(lastKeyDetected);
-  Serial.println("");
-  Serial.flush();
+  tft.reset();
   
+  uint16_t identifier = tft.readID();
+  if(identifier == 0x9325) {
+    Serial.println(F("Found ILI9325 LCD driver"));
+  } else if(identifier == 0x9328) {
+    Serial.println(F("Found ILI9328 LCD driver"));
+  } else if(identifier == 0x4535) {
+    Serial.println(F("Found LGDP4535 LCD driver"));
+  }else if(identifier == 0x7575) {
+    Serial.println(F("Found HX8347G LCD driver"));
+  } else if(identifier == 0x9341) {
+    Serial.println(F("Found ILI9341 LCD driver"));
+  } else if(identifier == 0x8357) {
+    Serial.println(F("Found HX8357D LCD driver"));
+  } else if(identifier==0x0101) {     
+    identifier=0x9341;
+    Serial.println(F("Found 0x9341 LCD driver"));
+  } else {
+    Serial.print(F("Unknown LCD driver chip: "));
+    Serial.println(identifier, HEX);
+    Serial.println(F("If using the Elegoo 2.8\" TFT Arduino shield, the line:"));
+    Serial.println(F("  #define USE_Elegoo_SHIELD_PINOUT"));
+    Serial.println(F("should appear in the library header (Elegoo_TFT.h)."));
+    Serial.println(F("If using the breakout board, it should NOT be #defined!"));
+    Serial.println(F("Also if using the breakout, double-check that all wiring"));
+    Serial.println(F("matches the tutorial."));
+    identifier=0x9341;
+   
+  }
+
+  tft.begin(identifier);
+  tft.setRotation(2);
+
+  tft.fillScreen(BLACK);
+
+  tft.fillRect(0, 0, BOXSIZE, BOXSIZE, RED);
+  tft.fillRect(BOXSIZE, 0, BOXSIZE, BOXSIZE, BLUE);
+  tft.fillRect(BOXSIZE*2, 0, BOXSIZE, BOXSIZE, YELLOW);
+  
+  currentcolor = RED;
+ 
+  pinMode(13, OUTPUT);
+  pinMode(POLARITY_RELAY_1, OUTPUT);  
+  pinMode(POLARITY_RELAY_2, OUTPUT);  
+  setCoolingState(OFF);
+}
+
+#define MINPRESSURE 10
+#define MAXPRESSURE 1000
+
+#define V_SEP 20
+#define H_SEP 13
+#define CHAR_SIZE 2
+
+void drawText(int x, int y, const char *txt, uint16_t color) {
+  int i, n = strlen(txt);
+  tft.fillRect(x, y, x+n*H_SEP, y+V_SEP, BLACK);
+  for ( i = 0; i<n; i++ ) {
+    tft.drawChar(x+i*H_SEP, y, txt[i], color, BLACK, CHAR_SIZE);
+  }
+}
+
+void redrawCoolingState(int x, int y) {
+  tft.fillRect(x, y, x+100, y+100, BLACK);
+  switch(coolingState) {
+    case OFF: drawText(x, y, "OFF ", YELLOW); break;
+    case COOLING: drawText(x, y, "COOL", BLUE); break;
+    case HEATING: drawText(x, y, "HEAT", RED); break;
+  }
+}
+
+int lastTemperature = -500;
+int lastHumidity = -1;
+
+void redrawTemperatureAndHumidity(int x, int y) {
+  if ( temperature != lastTemperature || humidity != lastHumidity ) {
+  tft.fillRect(x, y, x+100, y+100, BLACK);
+  
+  tft.drawChar(x, y, 'T', GREEN, BLACK, CHAR_SIZE);
+  tft.drawChar(x+1*H_SEP, y, ':', GREEN, BLACK, CHAR_SIZE);
+  tft.drawChar(x+2*H_SEP, y, '0' + (temperature/100)%10, GREEN, BLACK, CHAR_SIZE);
+  tft.drawChar(x+3*H_SEP, y, '0' + (temperature/10)%10, GREEN, BLACK, CHAR_SIZE);
+  tft.drawChar(x+4*H_SEP, y, '0' + (temperature)%10, GREEN, BLACK, CHAR_SIZE);
+  tft.drawChar(x+5*H_SEP, y, temperatureMode, GREEN, BLACK, CHAR_SIZE);
+
+  y+=V_SEP;
+  tft.drawChar(x, y, 'H', GREEN, BLACK, CHAR_SIZE);
+  tft.drawChar(x+1*H_SEP, y, ':', GREEN, BLACK, CHAR_SIZE);
+  tft.drawChar(x+2*H_SEP, y, '0' + (humidity/100)%10, GREEN, BLACK, CHAR_SIZE);
+  tft.drawChar(x+3*H_SEP, y, '0' + (humidity/10)%10, GREEN, BLACK, CHAR_SIZE);
+  tft.drawChar(x+4*H_SEP, y, '0' + (humidity)%10, GREEN, BLACK, CHAR_SIZE);
+  tft.drawChar(x+5*H_SEP, y, '%', GREEN, BLACK, 2);
+  }
+
+  lastTemperature = temperature;
+  lastHumidity = humidity;
 }
 
 void sensorTick() {
@@ -185,129 +201,92 @@ void sensorTick() {
   int retries = 3;
   int success;  
   while(retries>0) {
-    if (dht11.read(pinDHT11, &temperature, &humidity, NULL)) {
-     retries--;
-     success = 0;
-     if ( temperatureMode == 'F' ) {
+    if (dht11.read(TEMPERATURE_HUMIDITY_SENSOR_PIN, &temperature, &humidity, NULL)) {
+      retries--;
+      success = 0;
+      if ( temperatureMode == 'F' ) {
         temperature = DGUtil::temperatureCtoF(temperature);
-     }
-   } else {
-     success = 1;
-     break;
-   }
+      }
+    } else {
+      success = 1;
+      break;
+    }
   }
 
   if ( !success ) {
     sensorError = true;
     temperature = -1;
     humidity = -1;
+    Serial.println("Sensor error!");
     return;
   } else {
     sensorError = false;
-  }
-
-  if ( temperature < thresholdTemperature - 2 ) {
-    temperatureGradient = 1;
-  } else if ( temperature > thresholdTemperature + 2 ) {
-    temperatureGradient = -1;
-  } else {
-    temperatureGradient = 0;
-  }
-
-  if ( humidity > thresholdHumidity + 2 ) {
-    humidityState = 1;
-  } else if ( humidity < thresholdHumidity - 2 ) {
-    humidityState = -1;
-  } else {
-    humidityState = 0;
-  }
-  
-  setFridge();  
-  digitalWrite(pinRelayHumidityDown, humidityState>0?LOW:HIGH );
-  digitalWrite(pinRelayHumidityUp, humidityState<0?LOW:HIGH );
-}
-
-void refreshLed() {
-  if ( sensorError ) {
-    analogWrite(pinRED,   255 );
-    analogWrite(pinGREEN,   0 );
-    analogWrite(pinBLUE,    0 );
-  } else {
-    analogWrite(pinRED,     0 );
-    analogWrite(pinGREEN, 255 );
-    analogWrite(pinBLUE,    0 );
+    Serial.print("Temperature: ");
+    Serial.print(temperature);
+    Serial.print(", humidity: ");
+    Serial.println(humidity);
+    redrawTemperatureAndHumidity(0, 100);
   }
 }
 
-void refreshScreen() {
+int count = 0;
 
-  if ( seconds - lastReinit > 60 ) {
-    dg->reinit();
-    lastReinit = seconds;
-  }
-  if ( menuState ) {
-    refreshMenu();
-  } else {
-    refreshDefaultScreen();
-  }
-}
-
-void refreshMenu() {
-  dg->screen("RH [1/2]:      %",
-             " T [4/5]:      C");
-  dg->show(15, 1, temperatureMode);
-  dg->show(12, 0, thresholdHumidity, 3);
-  dg->show(12, 1, thresholdTemperature, 3);
-  dg->refresh();
-}
-
-void refreshDefaultScreen() {
-#ifdef LOG
-  Serial.println("Refresh screen");
-#endif
-  dg->screen(line1, line2);
-  dg->show(14, 0, (seconds/60)%60,     2);
-  dg->show(11, 0, (seconds/3600)%24,   2);
-  dg->show( 5, 0, (seconds/3600)/24,   4);
-  dg->show( 5, 1, temperatureMode);
-  if ( sensorError ) {
-    dg->show(0, 1, "Sensor error! ");
-  } else {
-    dg->show( 2, 1, temperature,         3);
-    dg->show(10, 1, humidity,            3);
-  }
-
-  // Progress tick at the space between hours/minutes.
-  dg->show(13, 0, progress[progressTick]);
-  progressTick = (progressTick+1)%PROGRESS_COUNT;
-
-  // + or - at 15 for fridge state
-  dg->show(15, 1, (temperatureGradient==1?'+':( temperatureGradient == -1 ? '-' : ' ') ) );
-  dg->refresh();
-}
 
 void loop() {
+  if(count%5000 == 0)
+    sensorTick();
+  count++;
+  
+  digitalWrite(13, HIGH);
+  TSPoint p = ts.getPoint();
+  digitalWrite(13, LOW);
 
-  if ( seconds - lastSeconds >= 2 ) {
-   sensorTick();
-   refreshLed();
-   refreshScreen();
-#ifdef REPORT
-   printReport();
-#endif
-   lastSeconds = seconds;
-  }
+  // if sharing pins, you'll need to fix the directions of the touchscreen pins
+  //pinMode(XP, OUTPUT);
+  pinMode(XM, OUTPUT);
+  pinMode(YP, OUTPUT);
+  //pinMode(YM, OUTPUT);
 
-  if(keyTick()) {
-    refreshScreen();
-  }
+  // we have some minimum pressure we consider 'valid'
+  // pressure of 0 means no pressing!
 
+  if (p.z > MINPRESSURE && p.z < MAXPRESSURE) {
+    /*
+    Serial.print("X = "); Serial.print(p.x);
+    Serial.print("\tY = "); Serial.print(p.y);
+    Serial.print("\tPressure = "); Serial.println(p.z);
+    */
+    
+    if (p.y < (TS_MINY-5)) {
+      Serial.println("erase");
+      // press the bottom of the screen to erase 
+      tft.fillRect(0, BOXSIZE, tft.width(), tft.height()-BOXSIZE, BLACK);
+    }
+    // scale from 0->1023 to tft.width
+    p.x = map(p.x, TS_MINX, TS_MAXX, tft.width(), 0);
+    //p.x = tft.width()-map(p.x, TS_MINX, TS_MAXX, tft.width(), 0);
+    p.y = (tft.height()-map(p.y, TS_MINY, TS_MAXY, tft.height(), 0));
+     //p.y = map(p.y, TS_MINY, TS_MAXY, tft.height(), 0);
+    /*
+    Serial.print("("); Serial.print(p.x);
+    Serial.print(", "); Serial.print(p.y);
+    Serial.println(")");
+    */
+    if (p.y < BOXSIZE) {
+       oldcolor = currentcolor;
 
-  // DHT11 sampling rate is 1HZ.
-  delay(10);
-  miliseconds += 10;
-  if ( miliseconds >= 1000 ) {
-    miliseconds = 0;
-    seconds++;
+       if (p.x < BOXSIZE) {
+         setCoolingState(HEATING);
+       } else if (p.x < BOXSIZE*2) {
+         setCoolingState(COOLING);
+       } else if (p.x < BOXSIZE*3) {
+         setCoolingState(OFF);
+       }
+
+    }
+    if (((p.y-PENRADIUS) > BOXSIZE) && ((p.y+PENRADIUS) < tft.height())) {
+      tft.fillCircle(p.x, p.y, PENRADIUS, currentcolor);
+    }
   }
 }
+
