@@ -48,6 +48,8 @@ TouchScreen ts = TouchScreen(XP, YP, XM, YM, 300);
 
 #define PUMP_TRANSISTOR_PIN 44
 
+#define DIFFUSER_TRANSISTOR_PIN 39
+
 DGScreen s(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
 SimpleDHT11 dht11;
 
@@ -57,6 +59,38 @@ SimpleDHT11 dht11;
 #define HEATING 2
 int coolingState = -1; // OFF, COOLING, HEATING
 int pumpState = -1;
+int diffuserState = -1;
+
+void toggleDiffuser() {
+  if ( diffuserState == ON ) {
+    setDiffuser(OFF);  
+  } else {
+    setDiffuser(ON);
+  }
+}
+
+void pushDiffuserButton() {
+  digitalWrite(DIFFUSER_TRANSISTOR_PIN, HIGH);
+  delay(100);
+  digitalWrite(DIFFUSER_TRANSISTOR_PIN, LOW);  
+  delay(100);
+}
+
+void setDiffuser(int state) {
+  if ( diffuserState == state ) return;
+  switch(state) {
+    case ON:
+      Serial.println(F("Diffuser on."));
+      pushDiffuserButton();
+      break;
+    case OFF:  
+      Serial.println(F("Diffuser off."));
+      pushDiffuserButton();
+      break;
+  }
+  diffuserState = state;
+  redrawDiffuserState(140, 100 + 2*V_SEP);
+}
 
 void setPump(int state) {
   if ( pumpState == state ) return;
@@ -71,7 +105,7 @@ void setPump(int state) {
       break;
   }
   pumpState = state;
-  redrawPumpState(160, 100 + V_SEP);
+  redrawPumpState(140, 100 + V_SEP);
 }
 
 void setCoolingState(int state) {
@@ -94,7 +128,7 @@ void setCoolingState(int state) {
       break;
   }
   coolingState = state;
-  redrawCoolingState(160, 100);
+  redrawCoolingState(140, 100);
 }
 
 #define ROW2 200
@@ -123,23 +157,32 @@ void setup(void) {
 
   s.fillRect(0, ROW2, BOXSIZE, BOXSIZE, CYAN);
   s.fillRect(BOXSIZE, ROW2, BOXSIZE, BOXSIZE, MAGENTA);
+  s.fillRect(BOXSIZE*2, ROW2, BOXSIZE, BOXSIZE, GREEN);
   
   pinMode(13, OUTPUT);
   pinMode(POLARITY_RELAY_1, OUTPUT);  
   pinMode(POLARITY_RELAY_2, OUTPUT);  
+  pinMode(DIFFUSER_TRANSISTOR_PIN, OUTPUT);  
   pinMode(PUMP_TRANSISTOR_PIN, OUTPUT);  
   setCoolingState(OFF);
   setPump(OFF);
+  setDiffuser(OFF);
 }
 
 #define MINPRESSURE 10
 #define MAXPRESSURE 1000
 
+void redrawDiffuserState(int x, int y) {
+  switch(diffuserState) {
+    case OFF: s.drawText(x, y, "DIF OFF", YELLOW); break;
+    case ON:  s.drawText(x, y, "DIF ON ", BLUE); break;
+  }    
+}
 
 void redrawPumpState(int x, int y) {
   switch(pumpState) {
-    case OFF: s.drawText(x, y, "OFF", YELLOW); break;
-    case ON:  s.drawText(x, y, "ON ", BLUE); break;
+    case OFF: s.drawText(x, y, "AIR OFF", YELLOW); break;
+    case ON:  s.drawText(x, y, "AIR ON ", BLUE); break;
   }  
 }
 
@@ -252,6 +295,8 @@ void loop() {
         setPump(ON);
       } else if ( p.x < BOXSIZE*2 ) {
         setPump(OFF);
+      } else if ( p.x < BOXSIZE*3) {
+        toggleDiffuser();
       }
     }
   }
