@@ -15,6 +15,7 @@ DGScreen::DGScreen(uint8_t cs, uint8_t cd, uint8_t wr, uint8_t rd, uint8_t reset
    bg = BLACK;
    nextCharX = 0;
    nextCharY = 0;
+   area = NULL;
 }
 
 void DGScreen::setColor(DGColor fg, DGColor bg) {
@@ -84,6 +85,33 @@ void DGScreen::drawChar(int16_t x, int16_t y, unsigned char c) {
   nextCharX = x+horizontalSeparation;
   nextCharY = y;
 }
+
+boolean DGScreen::processTouch(int16_t x, int16_t y) {
+  DGScreenArea *finger = this->area;
+  while(finger != NULL ) {
+    if ( x >= finger->x0 && x <= finger->x1 && y >= finger->y0 && y <= finger->y1 ) {
+      if ( finger->callback != NULL ) {
+        (*(finger->callback))();
+        return true;
+      }
+    }
+    finger = finger->next;
+  }
+  return false;
+}
+
+void DGScreen::addButton(int16_t x0, int16_t y0, int16_t w, int16_t h, DGColor color, DGScreenCallback callback) {
+  DGScreenArea *a = new DGScreenArea;
+  a->x0 = x0;
+  a->y0 = y0;
+  a->x1 = x0+w;
+  a->y1 = y0+h;
+  a->callback = callback;
+  a->next = this->area;
+  this->area = a;
+  this->fillRect(x0, y0, w, h, color);
+}
+
 
 void DGScreen::setup(DGColor fg, DGColor bg) {
 

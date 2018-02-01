@@ -92,6 +92,9 @@ void setDiffuser(int state) {
   redrawDiffuserState(140, 100 + 2*V_SEP);
 }
 
+void pumpOn() { setPump(ON); }
+void pumpOff() { setPump(OFF); }
+
 void setPump(int state) {
   if ( pumpState == state ) return;
   switch(state) {
@@ -107,6 +110,10 @@ void setPump(int state) {
   pumpState = state;
   redrawPumpState(140, 100 + V_SEP);
 }
+
+void boxHeat() { setCoolingState(HEATING); }
+void boxCool() { setCoolingState(COOLING); }
+void boxOff() { setCoolingState(OFF); }
 
 void setCoolingState(int state) {
   if ( state == coolingState ) return;
@@ -149,15 +156,15 @@ void setup(void) {
   Serial.println(F("Screen setup, filling it BLACK."));
   s.clearScreen();
 
-  s.fillRect(0, 0, BOXSIZE, BOXSIZE, RED);
-  s.fillRect(BOXSIZE, 0, BOXSIZE, BOXSIZE, BLUE);
-  s.fillRect(BOXSIZE*2, 0, BOXSIZE, BOXSIZE, YELLOW);
+  s.addButton(0, 0, BOXSIZE, BOXSIZE, RED, boxHeat);
+  s.addButton(BOXSIZE, 0, BOXSIZE, BOXSIZE, BLUE, boxCool);
+  s.addButton(BOXSIZE*2, 0, BOXSIZE, BOXSIZE, YELLOW, boxOff);
   
   currentcolor = RED;
 
-  s.fillRect(0, ROW2, BOXSIZE, BOXSIZE, CYAN);
-  s.fillRect(BOXSIZE, ROW2, BOXSIZE, BOXSIZE, MAGENTA);
-  s.fillRect(BOXSIZE*2, ROW2, BOXSIZE, BOXSIZE, GREEN);
+  s.addButton(0, ROW2, BOXSIZE, BOXSIZE, CYAN, pumpOn);
+  s.addButton(BOXSIZE, ROW2, BOXSIZE, BOXSIZE, MAGENTA, pumpOff);
+  s.addButton(BOXSIZE*2, ROW2, BOXSIZE, BOXSIZE, GREEN, toggleDiffuser);
   
   pinMode(13, OUTPUT);
   pinMode(POLARITY_RELAY_1, OUTPUT);  
@@ -270,34 +277,15 @@ void loop() {
   // pressure of 0 means no pressing!
 
   if (p.z > MINPRESSURE && p.z < MAXPRESSURE) {
-    
-    if (p.y < (TS_MINY-5)) {
-      Serial.println("erase");
-      // press the bottom of the screen to erase 
-      s.fillRect(0, BOXSIZE, s.width(), s.height()-BOXSIZE, BLACK);
-    }
+
     // scale from 0->1023 to tft.width
     p.x = map(p.x, TS_MINX, TS_MAXX, s.width(), 0);
     p.y = (s.height()-map(p.y, TS_MINY, TS_MAXY, s.height(), 0));
 
-    if (p.y < BOXSIZE) {
-       oldcolor = currentcolor;
-
-       if (p.x < BOXSIZE) {
-         setCoolingState(HEATING);
-       } else if (p.x < BOXSIZE*2) {
-         setCoolingState(COOLING);
-       } else if (p.x < BOXSIZE*3) {
-         setCoolingState(OFF);
-       }
-    } else if (p.y > ROW2 && p.y < ROW2+BOXSIZE) {
-      if ( p.x < BOXSIZE ) {
-        setPump(ON);
-      } else if ( p.x < BOXSIZE*2 ) {
-        setPump(OFF);
-      } else if ( p.x < BOXSIZE*3) {
-        toggleDiffuser();
-      }
+    if ( s.processTouch(p.x, p.y) ) {
+      Serial.println("Process touch!");
+    } else {
+      Serial.println("Empty touch!");
     }
   }
 }

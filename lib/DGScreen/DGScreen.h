@@ -22,6 +22,17 @@ typedef uint16_t DGColor;
 #define YELLOW  0xFFE0
 #define WHITE   0xFFFF
 
+typedef void (*DGScreenCallback)();
+
+typedef struct _DGScreenArea {
+  uint16_t x0;
+  uint16_t y0;
+  uint16_t x1;
+  uint16_t y1;
+  DGScreenCallback callback;
+  struct _DGScreenArea *next;
+} DGScreenArea;
+
 class DGScreen {
   public:
     DGScreen(uint8_t cs, uint8_t cd, uint8_t wr, uint8_t rd, uint8_t reset);
@@ -41,6 +52,9 @@ class DGScreen {
     void setColor(DGColor fg, DGColor bg);
     void setBg(DGColor bg);
     void setFg(DGColor fg);
+    boolean processTouch(int16_t x, int16_t y);
+    void addButton(int16_t x0, int16_t y0, int16_t w, int16_t h, DGColor color, DGScreenCallback callback);
+
 
   private:
     Elegoo_TFTLCD *tft;
@@ -49,6 +63,7 @@ class DGScreen {
     uint8_t charSize;
     DGColor fg, bg;
     uint16_t nextCharX, nextCharY;
+    DGScreenArea *area;
 };
 
 #endif
