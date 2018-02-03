@@ -3,7 +3,7 @@ compy = 185;	// Size of compartments, Y
 wall = 1.15;		// Width of wall
 nox = 2;		// Number of compartments, X
 noy = 1;		// Number of compartments, Y
-deep = 190;		// Depth of compartments
+deep = 160;		// Depth of compartments
 
 tolerance=.05;	// Tolerance around lid.  If it's too tight, increase this. 
 			// If it's too loose, decrease it.
