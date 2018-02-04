@@ -1,6 +1,6 @@
 compx = 87;	// Size of compartments, X
 compy = 175;	// Size of compartments, Y
-wall = 1.15;		// Width of wall
+wall = 2;		// Width of wall
 nox = 2;		// Number of compartments, X
 noy = 1;		// Number of compartments, Y
 deep = 150;		// Depth of compartments
@@ -20,15 +20,19 @@ difference() {
 		{
              for( xbox = [ 0 : nox - 1])
 			{
-			translate([ xbox * ( compx + wall ) + wall, ybox * ( compy + wall ) + wall, wall])
-			cube ( size = [ compx, compy, deep+1 ]);
+            $fn=10;
+			translate([ xbox * ( compx + wall ) + wall+5, ybox * ( compy + wall ) + wall+5, wall+5])
+            minkowski() {
+			cube ( size = [ compx-10, compy-10, deep-9 ]);
+            sphere ( 5);
+            }
 			}
 		}
 	};
     
     translate([compx, compy/2, 30])
     rotate ([0,90,0])
-    cylinder (r=19, h=20, center=true);
+    cylinder (r=9, h=20, center=true);
 }
 }
 
