@@ -44,7 +44,8 @@ TouchScreen ts = TouchScreen(XP, YP, XM, YM, 300);
 #define POLARITY_RELAY_1 31
 #define POLARITY_RELAY_2 33
 
-#define TEMPERATURE_HUMIDITY_SENSOR_PIN 35
+#define TEMPERATURE_HUMIDITY_SENSOR_IN_PIN 35
+#define TEMPERATURE_HUMIDITY_SENSOR_OUT_PIN 45
 
 #define PUMP_TRANSISTOR_PIN 44
 
@@ -224,10 +225,10 @@ void redrawTemperatureAndHumidity(int x, int y) {
 
 void sensorTick() {
   // DHT11 read
+  int success;
   int retries = 3;
-  int success;  
   while(retries>0) {
-    if (dht11.read(TEMPERATURE_HUMIDITY_SENSOR_PIN, &temperature, &humidity, NULL)) {
+    if (dht11.read(TEMPERATURE_HUMIDITY_SENSOR_IN_PIN, &temperature, &humidity, NULL)) {
       retries--;
       success = 0;
       if ( temperatureMode == 'F' ) {
