@@ -143,11 +143,9 @@ void setCoolingState(int state) {
 #define BOXSIZE 80
 
 int oldcolor, currentcolor;
-byte temperature = 0;
-byte humidity = 0;
+byte temperature[] = { 0, 0 };
+byte humidity[] = { 0, 0 };
 char temperatureMode = 'C';
-boolean sensorError = false;
-
 void setup(void) {
   Serial.begin(9600);
   Serial.println(F("Paint!"));
@@ -196,64 +194,80 @@ void redrawPumpState(int x, int y) {
 
 void redrawCoolingState(int x, int y) {
   switch(coolingState) {
-    case OFF: s.drawText(x, y, "OFF ", YELLOW); break;
-    case COOLING: s.drawText(x, y, "COOL", BLUE); break;
-    case HEATING: s.drawText(x, y, "HEAT", RED); break;
+    case OFF:     s.drawText(x, y, "OFF ", YELLOW); break;
+    case COOLING: s.drawText(x, y, "COOL", BLUE);   break;
+    case HEATING: s.drawText(x, y, "HEAT", RED);    break;
   }
 }
 
-int lastTemperature = -500;
-int lastHumidity = -1;
+#define IN 0
+#define OUT 1
+int lastTemperature[] = { -500, -500 };
+int lastHumidity[] = { -1, -1};
 
-void redrawTemperatureAndHumidity(int x, int y) {
-  if ( temperature != lastTemperature || humidity != lastHumidity ) {
-    s.clearRect(x, y, 100, 2*V_SEP);
-  
-    s.drawText(x, y, "T:");
-    s.appendInt(temperature, 3);
+void redrawTemperatureAndHumidity(int x, int y, int which) {
+  if ( temperature[which] != lastTemperature[which] || humidity[which] != lastHumidity[which] ) {
+    s.clearRect(x, y, 120, 2*V_SEP);
+
+    if (which==IN) {
+      s.drawText(x, y, "T_i:");
+    } else {
+      s.drawText(x, y, "T_o:");      
+    }
+    s.appendInt(temperature[which], 3);
     s.appendChar(temperatureMode);
 
     y+=V_SEP;
-    s.drawText(x, y, "H:");
-    s.appendInt(humidity, 3);
+    if (which==IN) {
+      s.drawText(x, y, "H_i:");
+    } else {
+      s.drawText(x, y, "H_o:");      
+    }
+    s.appendInt(humidity[which], 3);
     s.appendChar('%');
   }
 
-  lastTemperature = temperature;
-  lastHumidity = humidity;
+  lastTemperature[which] = temperature[which];
+  lastHumidity[which] = humidity[which];
 }
 
 void sensorTick() {
   // DHT11 read
-  int success;
-  int retries = 3;
-  while(retries>0) {
-    if (dht11.read(TEMPERATURE_HUMIDITY_SENSOR_IN_PIN, &temperature, &humidity, NULL)) {
-      retries--;
-      success = 0;
-      if ( temperatureMode == 'F' ) {
-        temperature = DGUtil::temperatureCtoF(temperature);
+  for ( int i=0; i<2; i++ ) {
+    int which = ( i == 0 ? IN : OUT);
+    bool success = false;
+    int retries = 3;
+    while(retries>0) {
+      if (dht11.read(which==IN?TEMPERATURE_HUMIDITY_SENSOR_IN_PIN:TEMPERATURE_HUMIDITY_SENSOR_OUT_PIN, &(temperature[which]), &(humidity[which]), NULL)) {
+        retries--;
+        success = false;
+      } else {
+        success = true;
+        if ( temperatureMode == 'F' ) {
+          temperature[which] = DGUtil::temperatureCtoF(temperature[which]);
+        }
+        break;
       }
+    }
+
+    
+    if ( !success ) {
+      temperature[which] = -1;
+      humidity[which] = -1;
+      Serial.print("Sensor error:");
+      Serial.println(which);
     } else {
-      success = 1;
-      break;
+      Serial.print("Sensor data:");
+      Serial.print(which);
+      Serial.print(", t=");
+      Serial.print(temperature[which]);
+      Serial.print(", h=");
+      Serial.print(humidity[which]);
+      redrawTemperatureAndHumidity(0, 100 + 2*i*V_SEP, which);
     }
   }
-
-  if ( !success ) {
-    sensorError = true;
-    temperature = -1;
-    humidity = -1;
-    Serial.println("Sensor error!");
-    return;
-  } else {
-    sensorError = false;
-    Serial.print("Temperature: ");
-    Serial.print(temperature);
-    Serial.print(", humidity: ");
-    Serial.println(humidity);
-    redrawTemperatureAndHumidity(0, 100);
-  }
+ 
+  
 }
 
 int count = 0;
