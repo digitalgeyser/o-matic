@@ -42,6 +42,7 @@ class DGScreen {
     void clearScreen();
     void fillScreen(DGColor color);
     void fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color);
+    void fillRoundRect(int16_t x, int16_t y, int16_t w, int16_t h, int16_t radius, DGColor color);
     void clearRect(int16_t x, int16_t y, int16_t w, int16_t h);
     void fillCircle(int16_t x0, int16_t y0, int16_t r, uint16_t color);
     void drawChar(int16_t x, int16_t y, unsigned char c);

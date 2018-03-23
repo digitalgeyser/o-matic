@@ -51,6 +51,10 @@ void DGScreen::fillRect(int16_t x, int16_t y, int16_t w, int16_t h, DGColor colo
   tft->fillRect(x, y, w, h, color);
 }
 
+void DGScreen::fillRoundRect(int16_t x, int16_t y, int16_t w, int16_t h, int16_t radius, DGColor color) {
+  tft->fillRoundRect(x, y, w, h, radius, color);
+}
+
 void DGScreen::fillCircle(int16_t x0, int16_t y0, int16_t r, DGColor color) {
   tft -> fillCircle(x0, y0, r, color);
 }
@@ -109,7 +113,7 @@ void DGScreen::addButton(int16_t x0, int16_t y0, int16_t w, int16_t h, DGColor c
   a->callback = callback;
   a->next = this->area;
   this->area = a;
-  this->fillRect(x0, y0, w, h, color);
+  this->fillRoundRect(x0, y0, w, h, w/5, color);
 }
 
 
