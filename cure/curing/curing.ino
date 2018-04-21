@@ -49,7 +49,8 @@ TouchScreen ts = TouchScreen(XP, YP, XM, YM, 300);
 
 #define PUMP_TRANSISTOR_PIN 44
 
-#define DIFFUSER_TRANSISTOR_PIN 39
+#define DIFFUSER_RELAY 26
+#define UNUSED_RELAY 24
 
 DGScreen s(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
 SimpleDHT11 dht11;
@@ -58,44 +59,124 @@ SimpleDHT11 dht11;
 #define ON 1
 #define COOLING 1
 #define HEATING 2
-int coolingState = -1; // OFF, COOLING, HEATING
-int pumpState = -1;
-int diffuserState = -1;
 
-void toggleDiffuser() {
-  if ( diffuserState == ON ) {
-    setDiffuser(OFF);  
-  } else {
-    setDiffuser(ON);
+// State of stuff: -1 is initial state.
+int coolingState = -1; // OFF, COOLING, HEATING
+int pumpState = -1; // ON, OFF
+int diffuserState = -1; // ON, OFF
+
+#define ROW2 200
+#define BOXSIZE 60
+
+int oldcolor, currentcolor;
+byte temperature[] = { 0, 0 };
+byte humidity[] = { 0, 0 };
+char temperatureMode = 'C';
+
+#define IN 0
+#define OUT 1
+int lastTemperature[] = { -500, -500 };
+int lastHumidity[] = { -1, -1};
+
+
+#define MINPRESSURE 10
+#define MAXPRESSURE 1000
+
+int count = 0;
+
+
+/************************************** SETUP **********************************/
+void setup(void) {
+  Serial.begin(9600);
+  Serial.println(F("Paint!"));
+  
+  s.setup(GREEN, BLACK, 2);
+  
+  Serial.println(F("Screen setup, filling it BLACK."));
+  s.clearScreen();
+
+  s.addButton(0, 0, BOXSIZE, BOXSIZE, RED, boxHeat);
+  s.addButton(BOXSIZE, 0, BOXSIZE, BOXSIZE, BLUE, boxCool);
+  s.addButton(BOXSIZE*2, 0, BOXSIZE, BOXSIZE, YELLOW, boxOff);
+  
+  currentcolor = RED;
+
+  s.addButton(0, ROW2, BOXSIZE, BOXSIZE, CYAN, pumpOn);
+  s.addButton(BOXSIZE, ROW2, BOXSIZE, BOXSIZE, MAGENTA, pumpOff);
+  s.addButton(BOXSIZE*2, ROW2, BOXSIZE, BOXSIZE, GREEN, diffuserOn);
+  s.addButton(BOXSIZE*3, ROW2, BOXSIZE, BOXSIZE, WHITE, diffuserOff);
+  
+  pinMode(13, OUTPUT);
+  pinMode(POLARITY_RELAY_1, OUTPUT);  
+  pinMode(POLARITY_RELAY_2, OUTPUT);  
+  pinMode(DIFFUSER_RELAY, OUTPUT);  
+  pinMode(UNUSED_RELAY, OUTPUT);  
+  pinMode(PUMP_TRANSISTOR_PIN, OUTPUT);  
+  setCoolingState(OFF);
+  setPump(OFF);
+  setDiffuser(OFF);
+  digitalWrite(UNUSED_RELAY, HIGH);
+}
+
+/******************************* LOOP ******************************************/
+void loop() {
+  if(count%5000 == 0)
+    sensorTick();
+  count++;
+  
+  digitalWrite(13, HIGH);
+  TSPoint p = ts.getPoint();
+  digitalWrite(13, LOW);
+
+  pinMode(XM, OUTPUT);
+  pinMode(YP, OUTPUT);
+
+  // we have some minimum pressure we consider 'valid'
+  // pressure of 0 means no pressing!
+  if (p.z > MINPRESSURE && p.z < MAXPRESSURE) {
+
+    // scale from 0->1023 to tft.width
+    p.x = map(p.x, TS_MINX, TS_MAXX, s.width(), 0);
+    p.y = (s.height()-map(p.y, TS_MINY, TS_MAXY, s.height(), 0));
+
+    if ( s.processTouch(p.x, p.y) ) {
+      Serial.println("Process touch!");
+    } else {
+      Serial.println("Empty touch!");
+    }
   }
 }
 
-void pushDiffuserButton() {
-  digitalWrite(DIFFUSER_TRANSISTOR_PIN, HIGH);
-  delay(100);
-  digitalWrite(DIFFUSER_TRANSISTOR_PIN, LOW);  
-  delay(100);
-}
+/*************************************************** Functions ****************************/
 
+void diffuserOn() { setDiffuser(ON); }
+void diffuserOff() { setDiffuser(OFF); }
 void setDiffuser(int state) {
   if ( diffuserState == state ) return;
   switch(state) {
     case ON:
       Serial.println(F("Diffuser on."));
-      pushDiffuserButton();
+      digitalWrite(DIFFUSER_RELAY, LOW);
       break;
     case OFF:  
       Serial.println(F("Diffuser off."));
-      pushDiffuserButton();
+      digitalWrite(DIFFUSER_RELAY, HIGH);
       break;
   }
   diffuserState = state;
   redrawDiffuserState(140, 100 + 2*V_SEP);
 }
+void redrawDiffuserState(int x, int y) {
+  switch(diffuserState) {
+    case OFF: s.drawText(x, y, "DIF OFF", YELLOW); break;
+    case ON:  s.drawText(x, y, "DIF ON ", BLUE); break;
+  }    
+}
+
+
 
 void pumpOn() { setPump(ON); }
 void pumpOff() { setPump(OFF); }
-
 void setPump(int state) {
   if ( pumpState == state ) return;
   switch(state) {
@@ -111,6 +192,13 @@ void setPump(int state) {
   pumpState = state;
   redrawPumpState(140, 100 + V_SEP);
 }
+void redrawPumpState(int x, int y) {
+  switch(pumpState) {
+    case OFF: s.drawText(x, y, "AIR OFF", YELLOW); break;
+    case ON:  s.drawText(x, y, "AIR ON ", BLUE); break;
+  }  
+}
+
 
 void boxHeat() { setCoolingState(HEATING); }
 void boxCool() { setCoolingState(COOLING); }
@@ -139,59 +227,6 @@ void setCoolingState(int state) {
   redrawCoolingState(140, 100);
 }
 
-#define ROW2 200
-#define BOXSIZE 80
-
-int oldcolor, currentcolor;
-byte temperature[] = { 0, 0 };
-byte humidity[] = { 0, 0 };
-char temperatureMode = 'C';
-void setup(void) {
-  Serial.begin(9600);
-  Serial.println(F("Paint!"));
-  
-  s.setup(GREEN, BLACK);
-  
-  Serial.println(F("Screen setup, filling it BLACK."));
-  s.clearScreen();
-
-  s.addButton(0, 0, BOXSIZE, BOXSIZE, RED, boxHeat);
-  s.addButton(BOXSIZE, 0, BOXSIZE, BOXSIZE, BLUE, boxCool);
-  s.addButton(BOXSIZE*2, 0, BOXSIZE, BOXSIZE, YELLOW, boxOff);
-  
-  currentcolor = RED;
-
-  s.addButton(0, ROW2, BOXSIZE, BOXSIZE, CYAN, pumpOn);
-  s.addButton(BOXSIZE, ROW2, BOXSIZE, BOXSIZE, MAGENTA, pumpOff);
-  s.addButton(BOXSIZE*2, ROW2, BOXSIZE, BOXSIZE, GREEN, toggleDiffuser);
-  
-  pinMode(13, OUTPUT);
-  pinMode(POLARITY_RELAY_1, OUTPUT);  
-  pinMode(POLARITY_RELAY_2, OUTPUT);  
-  pinMode(DIFFUSER_TRANSISTOR_PIN, OUTPUT);  
-  pinMode(PUMP_TRANSISTOR_PIN, OUTPUT);  
-  setCoolingState(OFF);
-  setPump(OFF);
-  setDiffuser(OFF);
-}
-
-#define MINPRESSURE 10
-#define MAXPRESSURE 1000
-
-void redrawDiffuserState(int x, int y) {
-  switch(diffuserState) {
-    case OFF: s.drawText(x, y, "DIF OFF", YELLOW); break;
-    case ON:  s.drawText(x, y, "DIF ON ", BLUE); break;
-  }    
-}
-
-void redrawPumpState(int x, int y) {
-  switch(pumpState) {
-    case OFF: s.drawText(x, y, "AIR OFF", YELLOW); break;
-    case ON:  s.drawText(x, y, "AIR ON ", BLUE); break;
-  }  
-}
-
 void redrawCoolingState(int x, int y) {
   switch(coolingState) {
     case OFF:     s.drawText(x, y, "OFF ", YELLOW); break;
@@ -199,11 +234,6 @@ void redrawCoolingState(int x, int y) {
     case HEATING: s.drawText(x, y, "HEAT", RED);    break;
   }
 }
-
-#define IN 0
-#define OUT 1
-int lastTemperature[] = { -500, -500 };
-int lastHumidity[] = { -1, -1};
 
 void redrawTemperatureAndHumidity(int x, int y, int which) {
   if ( temperature[which] != lastTemperature[which] || humidity[which] != lastHumidity[which] ) {
@@ -270,38 +300,4 @@ void sensorTick() {
   
 }
 
-int count = 0;
-
-
-void loop() {
-  if(count%5000 == 0)
-    sensorTick();
-  count++;
-  
-  digitalWrite(13, HIGH);
-  TSPoint p = ts.getPoint();
-  digitalWrite(13, LOW);
-
-  // if sharing pins, you'll need to fix the directions of the touchscreen pins
-  //pinMode(XP, OUTPUT);
-  pinMode(XM, OUTPUT);
-  pinMode(YP, OUTPUT);
-  //pinMode(YM, OUTPUT);
-
-  // we have some minimum pressure we consider 'valid'
-  // pressure of 0 means no pressing!
-
-  if (p.z > MINPRESSURE && p.z < MAXPRESSURE) {
-
-    // scale from 0->1023 to tft.width
-    p.x = map(p.x, TS_MINX, TS_MAXX, s.width(), 0);
-    p.y = (s.height()-map(p.y, TS_MINY, TS_MAXY, s.height(), 0));
-
-    if ( s.processTouch(p.x, p.y) ) {
-      Serial.println("Process touch!");
-    } else {
-      Serial.println("Empty touch!");
-    }
-  }
-}
 

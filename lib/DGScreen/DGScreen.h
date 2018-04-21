@@ -38,7 +38,7 @@ class DGScreen {
     DGScreen(uint8_t cs, uint8_t cd, uint8_t wr, uint8_t rd, uint8_t reset);
     int16_t width();
     int16_t height();
-    void setup(DGColor fg, DGColor bg);
+    void setup(DGColor fg, DGColor bg, uint8_t rotation);
     void clearScreen();
     void fillScreen(DGColor color);
     void fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color);

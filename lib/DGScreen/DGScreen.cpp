@@ -117,11 +117,12 @@ void DGScreen::addButton(int16_t x0, int16_t y0, int16_t w, int16_t h, DGColor c
 }
 
 
-void DGScreen::setup(DGColor fg, DGColor bg) {
+void DGScreen::setup(DGColor fg, DGColor bg, uint8_t rotation) {
 
   setColor(fg, bg);
 
   tft->reset();
+
   uint16_t identifier = tft->readID();
 
   if(identifier == 0x9325) {
@@ -153,6 +154,6 @@ void DGScreen::setup(DGColor fg, DGColor bg) {
   }
 
   tft->begin(identifier);
-  tft->setRotation(2);
+  tft->setRotation(rotation);
 
 }
