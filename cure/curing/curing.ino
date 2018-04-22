@@ -174,7 +174,6 @@ void redrawDiffuserState(int x, int y) {
 }
 
 
-
 void pumpOn() { setPump(ON); }
 void pumpOff() { setPump(OFF); }
 void setPump(int state) {
