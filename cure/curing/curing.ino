@@ -89,29 +89,29 @@ int count = 0;
 void setup(void) {
   Serial.begin(9600);
   Serial.println(F("Paint!"));
-  
+
   s.setup(GREEN, BLACK, 2);
-  
+
   Serial.println(F("Screen setup, filling it BLACK."));
   s.clearScreen();
 
   s.addButton(0, 0, BOXSIZE, BOXSIZE, RED, boxHeat);
   s.addButton(BOXSIZE, 0, BOXSIZE, BOXSIZE, BLUE, boxCool);
   s.addButton(BOXSIZE*2, 0, BOXSIZE, BOXSIZE, YELLOW, boxOff);
-  
+
   currentcolor = RED;
 
   s.addButton(0, ROW2, BOXSIZE, BOXSIZE, CYAN, pumpOn);
   s.addButton(BOXSIZE, ROW2, BOXSIZE, BOXSIZE, MAGENTA, pumpOff);
   s.addButton(BOXSIZE*2, ROW2, BOXSIZE, BOXSIZE, GREEN, diffuserOn);
   s.addButton(BOXSIZE*3, ROW2, BOXSIZE, BOXSIZE, WHITE, diffuserOff);
-  
+
   pinMode(13, OUTPUT);
-  pinMode(POLARITY_RELAY_1, OUTPUT);  
-  pinMode(POLARITY_RELAY_2, OUTPUT);  
-  pinMode(DIFFUSER_RELAY, OUTPUT);  
-  pinMode(UNUSED_RELAY, OUTPUT);  
-  pinMode(PUMP_TRANSISTOR_PIN, OUTPUT);  
+  pinMode(POLARITY_RELAY_1, OUTPUT);
+  pinMode(POLARITY_RELAY_2, OUTPUT);
+  pinMode(DIFFUSER_RELAY, OUTPUT);
+  pinMode(UNUSED_RELAY, OUTPUT);
+  pinMode(PUMP_TRANSISTOR_PIN, OUTPUT);
   setCoolingState(OFF);
   setPump(OFF);
   setDiffuser(OFF);
@@ -123,7 +123,7 @@ void loop() {
   if(count%5000 == 0)
     sensorTick();
   count++;
-  
+
   digitalWrite(13, HIGH);
   TSPoint p = ts.getPoint();
   digitalWrite(13, LOW);
@@ -158,7 +158,7 @@ void setDiffuser(int state) {
       Serial.println(F("Diffuser on."));
       digitalWrite(DIFFUSER_RELAY, LOW);
       break;
-    case OFF:  
+    case OFF:
       Serial.println(F("Diffuser off."));
       digitalWrite(DIFFUSER_RELAY, HIGH);
       break;
@@ -170,7 +170,7 @@ void redrawDiffuserState(int x, int y) {
   switch(diffuserState) {
     case OFF: s.drawText(x, y, "DIF OFF", YELLOW); break;
     case ON:  s.drawText(x, y, "DIF ON ", BLUE); break;
-  }    
+  }
 }
 
 
@@ -183,7 +183,7 @@ void setPump(int state) {
       digitalWrite(PUMP_TRANSISTOR_PIN, HIGH);
       Serial.println(F("Pump on."));
       break;
-    case OFF:  
+    case OFF:
       digitalWrite(PUMP_TRANSISTOR_PIN, LOW);
       Serial.println(F("Pump off."));
       break;
@@ -195,7 +195,7 @@ void redrawPumpState(int x, int y) {
   switch(pumpState) {
     case OFF: s.drawText(x, y, "AIR OFF", YELLOW); break;
     case ON:  s.drawText(x, y, "AIR ON ", BLUE); break;
-  }  
+  }
 }
 
 
@@ -206,19 +206,19 @@ void boxOff() { setCoolingState(OFF); }
 void setCoolingState(int state) {
   if ( state == coolingState ) return;
   switch(state) {
-    case OFF: 
-      digitalWrite(POLARITY_RELAY_1, HIGH);  
-      digitalWrite(POLARITY_RELAY_2, HIGH);  
+    case OFF:
+      digitalWrite(POLARITY_RELAY_1, HIGH);
+      digitalWrite(POLARITY_RELAY_2, HIGH);
       Serial.println(F("Off"));
       break;
     case COOLING:
-      digitalWrite(POLARITY_RELAY_1, HIGH);  
-      digitalWrite(POLARITY_RELAY_2, LOW);  
+      digitalWrite(POLARITY_RELAY_1, HIGH);
+      digitalWrite(POLARITY_RELAY_2, LOW);
       Serial.println(F("Cool"));
       break;
     case HEATING:
-      digitalWrite(POLARITY_RELAY_1, LOW);  
-      digitalWrite(POLARITY_RELAY_2, HIGH);  
+      digitalWrite(POLARITY_RELAY_1, LOW);
+      digitalWrite(POLARITY_RELAY_2, HIGH);
       Serial.println(F("Heat"));
       break;
   }
@@ -241,7 +241,7 @@ void redrawTemperatureAndHumidity(int x, int y, int which) {
     if (which==IN) {
       s.drawText(x, y, "T_i:");
     } else {
-      s.drawText(x, y, "T_o:");      
+      s.drawText(x, y, "T_o:");
     }
     s.appendInt(temperature[which], 3);
     s.appendChar(temperatureMode);
@@ -250,7 +250,7 @@ void redrawTemperatureAndHumidity(int x, int y, int which) {
     if (which==IN) {
       s.drawText(x, y, "H_i:");
     } else {
-      s.drawText(x, y, "H_o:");      
+      s.drawText(x, y, "H_o:");
     }
     s.appendInt(humidity[which], 3);
     s.appendChar('%');
@@ -267,7 +267,12 @@ void sensorTick() {
     bool success = false;
     int retries = 3;
     while(retries>0) {
-      if (dht11.read(which==IN?TEMPERATURE_HUMIDITY_SENSOR_IN_PIN:TEMPERATURE_HUMIDITY_SENSOR_OUT_PIN, &(temperature[which]), &(humidity[which]), NULL)) {
+      if (dht11.read(which==IN
+                      ? TEMPERATURE_HUMIDITY_SENSOR_IN_PIN
+                      : TEMPERATURE_HUMIDITY_SENSOR_OUT_PIN,
+                    &(temperature[which]),
+                    &(humidity[which]),
+                    NULL)) {
         retries--;
         success = false;
       } else {
@@ -279,7 +284,7 @@ void sensorTick() {
       }
     }
 
-    
+
     if ( !success ) {
       temperature[which] = -1;
       humidity[which] = -1;
@@ -295,8 +300,6 @@ void sensorTick() {
       redrawTemperatureAndHumidity(0, 100 + 2*i*V_SEP, which);
     }
   }
- 
-  
+
+
 }
-
-
