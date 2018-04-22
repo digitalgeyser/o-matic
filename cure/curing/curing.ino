@@ -137,8 +137,12 @@ void setup(void) {
 
 /******************************* LOOP ******************************************/
 void loop() {
-  if(count%5000 == 0)
+  if ( count%5000 == 0 )
     sensorTick();
+
+  if ( count%3000 == 0 && mode == MODE_AUTO )
+    autoTick();
+
   count++;
 
   digitalWrite(13, HIGH);
@@ -322,6 +326,32 @@ void redrawDesiredValues() {
   s.drawText(BUT_W+20, ROW3 + 5 + BUT_W, "H:");
   s.appendInt(desiredHumidity, 3);
   s.appendChar('%');
+}
+
+// This function is responsible for the automatic adjustments based on
+// sensor data.
+void autoTick() {
+  if ( temperature[IN] != -1 ) {
+    // We have data
+    if ( temperature[IN] > desiredTemperature + 3 ) {
+      setCoolingState(COOLING);
+    } else if ( temperature[IN] < desiredTemperature - 3 ) {
+      setCoolingState(HEATING);
+    } else {
+      setCoolingState(OFF);
+    }
+  }
+
+  if ( humidity[IN] != -1 ) {
+    // We have data
+    if ( humidity[IN] > desiredHumidity + 3 ) {
+      setPump(OFF);
+      setDiffuser(OFF);
+    } else if ( humidity[IN] < desiredHumidity - 3 ) {
+      setPump(ON);
+      setDiffuser(ON);
+    }
+  }
 }
 
 void sensorTick() {
