@@ -54,7 +54,7 @@ class DGScreen {
     void setBg(DGColor bg);
     void setFg(DGColor fg);
     boolean processTouch(int16_t x, int16_t y);
-    void addButton(int16_t x0, int16_t y0, int16_t w, int16_t h, DGColor color, DGScreenCallback callback);
+    void addButton(int16_t x0, int16_t y0, int16_t w, int16_t h, DGColor color, DGScreenCallback callback, boolean isHollow);
 
 
   private:

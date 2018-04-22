@@ -10,6 +10,7 @@
     #define F(string_literal) string_literal
 #endif
 
+/************************ MACROS **********************************/
 
 #define YP A3  // must be an analog pin, use "An" notation!
 #define XM A2  // must be an analog pin, use "An" notation!
@@ -27,19 +28,11 @@
 #define H_SEP 13
 #define CHAR_SIZE 2
 
-// For better pressure precision, we need to know the resistance
-// between X+ and X- Use any multimeter to read it
-// For the one we're using, its 300 ohms across the X plate
-TouchScreen ts = TouchScreen(XP, YP, XM, YM, 300);
-
 #define LCD_CS A3
 #define LCD_CD A2
 #define LCD_WR A1
 #define LCD_RD A0
-// optional
 #define LCD_RESET A4
-
-
 
 #define POLARITY_RELAY_1 31
 #define POLARITY_RELAY_2 33
@@ -52,35 +45,45 @@ TouchScreen ts = TouchScreen(XP, YP, XM, YM, 300);
 #define DIFFUSER_RELAY 26
 #define UNUSED_RELAY 24
 
-DGScreen s(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
-SimpleDHT11 dht11;
-
 #define OFF 0
 #define ON 1
 #define COOLING 1
 #define HEATING 2
+
+#define ROW2 70
+#define BOXSIZE 60
+#define STATUS_Y 145
+
+#define IN 0
+#define OUT 1
+
+#define MINPRESSURE 10
+#define MAXPRESSURE 1000
+
+/********************************  STATE *******************************/
+
+// For better pressure precision, we need to know the resistance
+// between X+ and X- Use any multimeter to read it
+// For the one we're using, its 300 ohms across the X plate
+TouchScreen ts = TouchScreen(XP, YP, XM, YM, 300);
+
+DGScreen s(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
+SimpleDHT11 dht11;
 
 // State of stuff: -1 is initial state.
 int coolingState = -1; // OFF, COOLING, HEATING
 int pumpState = -1; // ON, OFF
 int diffuserState = -1; // ON, OFF
 
-#define ROW2 200
-#define BOXSIZE 60
-
 int oldcolor, currentcolor;
 byte temperature[] = { 0, 0 };
 byte humidity[] = { 0, 0 };
-char temperatureMode = 'C';
 
-#define IN 0
-#define OUT 1
 int lastTemperature[] = { -500, -500 };
 int lastHumidity[] = { -1, -1};
 
-
-#define MINPRESSURE 10
-#define MAXPRESSURE 1000
+int desiredHumidity = 20;
+int desiredTemperature = 15;
 
 int count = 0;
 
@@ -95,16 +98,16 @@ void setup(void) {
   Serial.println(F("Screen setup, filling it BLACK."));
   s.clearScreen();
 
-  s.addButton(0, 0, BOXSIZE, BOXSIZE, RED, boxHeat);
-  s.addButton(BOXSIZE, 0, BOXSIZE, BOXSIZE, BLUE, boxCool);
-  s.addButton(BOXSIZE*2, 0, BOXSIZE, BOXSIZE, YELLOW, boxOff);
+  s.addButton(0, 0, BOXSIZE, BOXSIZE, RED, boxHeat, false);
+  s.addButton(BOXSIZE, 0, BOXSIZE, BOXSIZE, BLUE, boxCool, false);
+  s.addButton(BOXSIZE*2, 0, BOXSIZE, BOXSIZE, YELLOW, boxOff, false);
 
   currentcolor = RED;
 
-  s.addButton(0, ROW2, BOXSIZE, BOXSIZE, CYAN, pumpOn);
-  s.addButton(BOXSIZE, ROW2, BOXSIZE, BOXSIZE, MAGENTA, pumpOff);
-  s.addButton(BOXSIZE*2, ROW2, BOXSIZE, BOXSIZE, GREEN, diffuserOn);
-  s.addButton(BOXSIZE*3, ROW2, BOXSIZE, BOXSIZE, WHITE, diffuserOff);
+  s.addButton(0, ROW2, BOXSIZE, BOXSIZE, CYAN, pumpOn, false);
+  s.addButton(BOXSIZE, ROW2, BOXSIZE, BOXSIZE, CYAN, pumpOff, true);
+  s.addButton(BOXSIZE*2, ROW2, BOXSIZE, BOXSIZE, GREEN, diffuserOn, false);
+  s.addButton(BOXSIZE*3, ROW2, BOXSIZE, BOXSIZE, GREEN, diffuserOff, true);
 
   pinMode(13, OUTPUT);
   pinMode(POLARITY_RELAY_1, OUTPUT);
@@ -164,7 +167,7 @@ void setDiffuser(int state) {
       break;
   }
   diffuserState = state;
-  redrawDiffuserState(140, 100 + 2*V_SEP);
+  redrawDiffuserState(140, STATUS_Y + 2*V_SEP);
 }
 void redrawDiffuserState(int x, int y) {
   switch(diffuserState) {
@@ -189,7 +192,7 @@ void setPump(int state) {
       break;
   }
   pumpState = state;
-  redrawPumpState(140, 100 + V_SEP);
+  redrawPumpState(140, STATUS_Y + V_SEP);
 }
 void redrawPumpState(int x, int y) {
   switch(pumpState) {
@@ -223,7 +226,7 @@ void setCoolingState(int state) {
       break;
   }
   coolingState = state;
-  redrawCoolingState(140, 100);
+  redrawCoolingState(140, STATUS_Y);
 }
 
 void redrawCoolingState(int x, int y) {
@@ -244,7 +247,7 @@ void redrawTemperatureAndHumidity(int x, int y, int which) {
       s.drawText(x, y, "T_o:");
     }
     s.appendInt(temperature[which], 3);
-    s.appendChar(temperatureMode);
+    s.appendChar('C');
 
     y+=V_SEP;
     if (which==IN) {
@@ -277,9 +280,6 @@ void sensorTick() {
         success = false;
       } else {
         success = true;
-        if ( temperatureMode == 'F' ) {
-          temperature[which] = DGUtil::temperatureCtoF(temperature[which]);
-        }
         break;
       }
     }
@@ -297,7 +297,7 @@ void sensorTick() {
       Serial.print(temperature[which]);
       Serial.print(", h=");
       Serial.print(humidity[which]);
-      redrawTemperatureAndHumidity(0, 100 + 2*i*V_SEP, which);
+      redrawTemperatureAndHumidity(0, STATUS_Y + 2*i*V_SEP, which);
     }
   }
 
