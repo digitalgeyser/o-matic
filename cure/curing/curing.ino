@@ -59,6 +59,7 @@
 #define ROW3 (STATUS_Y + 4*V_SEP + 10)
 
 #define MAX_W 240
+#define MAX_H 320
 
 #define IN 0
 #define OUT 1
@@ -93,6 +94,8 @@ int desiredTemperature = 15;
 
 int count = 0;
 int mode = -1;
+
+int onIndicator = 0;
 
 
 /************************************** SETUP **********************************/
@@ -142,6 +145,19 @@ void loop() {
 
   if ( count%3000 == 0 && mode == MODE_AUTO )
     autoTick();
+
+  if ( count%50 == 0 ) {
+    char ch[11];
+    ch[10] = '\0';
+
+    int i;
+    for ( i=0; i<10; i++ ) {
+      ch[i] = ' ';
+    }
+    ch[onIndicator] = '.';
+    s.drawText(0, MAX_H - V_SEP, ch, YELLOW);
+    onIndicator = ( onIndicator + 1 ) % 10;
+  }
 
   count++;
 
