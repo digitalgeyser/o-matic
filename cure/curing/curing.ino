@@ -50,9 +50,15 @@
 #define COOLING 1
 #define HEATING 2
 
-#define ROW2 70
-#define BOXSIZE 60
-#define STATUS_Y 145
+#define MODE_AUTO 1
+#define MODE_MANUAL 0
+
+#define BUT_W 60
+#define BUT_H 40
+#define STATUS_Y ((BUT_H * 2) + 15)
+#define ROW3 (STATUS_Y + 4*V_SEP + 10)
+
+#define MAX_W 240
 
 #define IN 0
 #define OUT 1
@@ -86,6 +92,7 @@ int desiredHumidity = 20;
 int desiredTemperature = 15;
 
 int count = 0;
+int mode = -1;
 
 
 /************************************** SETUP **********************************/
@@ -98,16 +105,21 @@ void setup(void) {
   Serial.println(F("Screen setup, filling it BLACK."));
   s.clearScreen();
 
-  s.addButton(0, 0, BOXSIZE, BOXSIZE, RED, boxHeat, false);
-  s.addButton(BOXSIZE, 0, BOXSIZE, BOXSIZE, BLUE, boxCool, false);
-  s.addButton(BOXSIZE*2, 0, BOXSIZE, BOXSIZE, YELLOW, boxOff, false);
+  s.addButton(0, 0, BUT_W, BUT_H, RED, boxHeat, false);
+  s.addButton(BUT_W, 0, BUT_W, BUT_H, BLUE, boxCool, false);
+  s.addButton(BUT_W*2, 0, BUT_W, BUT_H, YELLOW, boxOff, false);
 
   currentcolor = RED;
 
-  s.addButton(0, ROW2, BOXSIZE, BOXSIZE, CYAN, pumpOn, false);
-  s.addButton(BOXSIZE, ROW2, BOXSIZE, BOXSIZE, CYAN, pumpOff, true);
-  s.addButton(BOXSIZE*2, ROW2, BOXSIZE, BOXSIZE, GREEN, diffuserOn, false);
-  s.addButton(BOXSIZE*3, ROW2, BOXSIZE, BOXSIZE, GREEN, diffuserOff, true);
+  s.addButton(0, BUT_H+5, BUT_W, BUT_H, CYAN, pumpOn, false);
+  s.addButton(BUT_W, BUT_H+5, BUT_W, BUT_H, CYAN, pumpOff, true);
+  s.addButton(BUT_W*2, BUT_H+5, BUT_W, BUT_H, GREEN, diffuserOn, false);
+  s.addButton(BUT_W*3, BUT_H+5, BUT_W, BUT_H, GREEN, diffuserOff, true);
+
+  s.addButton(0, ROW3, BUT_W, BUT_H, BLUE, tempMinus, true);
+  s.addButton(MAX_W - BUT_W, ROW3, BUT_W, BUT_H, RED, tempPlus, true);
+  s.addButton(0, ROW3 + BUT_H + 5, BUT_W, BUT_H, YELLOW, humidityMinus, true);
+  s.addButton(MAX_W - BUT_W, ROW3 + BUT_H + 5, BUT_W, BUT_H, GREEN, humidityPlus, true);
 
   pinMode(13, OUTPUT);
   pinMode(POLARITY_RELAY_1, OUTPUT);
@@ -115,10 +127,12 @@ void setup(void) {
   pinMode(DIFFUSER_RELAY, OUTPUT);
   pinMode(UNUSED_RELAY, OUTPUT);
   pinMode(PUMP_TRANSISTOR_PIN, OUTPUT);
+  setMode(MODE_MANUAL);
   setCoolingState(OFF);
   setPump(OFF);
   setDiffuser(OFF);
   digitalWrite(UNUSED_RELAY, HIGH);
+  redrawDesiredValues();
 }
 
 /******************************* LOOP ******************************************/
@@ -152,8 +166,8 @@ void loop() {
 
 /*************************************************** Functions ****************************/
 
-void diffuserOn() { setDiffuser(ON); }
-void diffuserOff() { setDiffuser(OFF); }
+void diffuserOn() { setDiffuser(ON); setMode(MODE_MANUAL); }
+void diffuserOff() { setDiffuser(OFF); setMode(MODE_MANUAL); }
 void setDiffuser(int state) {
   if ( diffuserState == state ) return;
   switch(state) {
@@ -167,9 +181,11 @@ void setDiffuser(int state) {
       break;
   }
   diffuserState = state;
-  redrawDiffuserState(140, STATUS_Y + 2*V_SEP);
+  redrawDiffuserState();
 }
-void redrawDiffuserState(int x, int y) {
+void redrawDiffuserState() {
+  int x = 140;
+  int y = STATUS_Y + 2*V_SEP;
   switch(diffuserState) {
     case OFF: s.drawText(x, y, "DIF OFF", YELLOW); break;
     case ON:  s.drawText(x, y, "DIF ON ", BLUE); break;
@@ -177,8 +193,8 @@ void redrawDiffuserState(int x, int y) {
 }
 
 
-void pumpOn() { setPump(ON); }
-void pumpOff() { setPump(OFF); }
+void pumpOn() { setPump(ON);  setMode(MODE_MANUAL); }
+void pumpOff() { setPump(OFF);  setMode(MODE_MANUAL); }
 void setPump(int state) {
   if ( pumpState == state ) return;
   switch(state) {
@@ -192,9 +208,11 @@ void setPump(int state) {
       break;
   }
   pumpState = state;
-  redrawPumpState(140, STATUS_Y + V_SEP);
+  redrawPumpState();
 }
-void redrawPumpState(int x, int y) {
+void redrawPumpState() {
+  int x = 140;
+  int y = STATUS_Y + V_SEP;
   switch(pumpState) {
     case OFF: s.drawText(x, y, "AIR OFF", YELLOW); break;
     case ON:  s.drawText(x, y, "AIR ON ", BLUE); break;
@@ -202,9 +220,9 @@ void redrawPumpState(int x, int y) {
 }
 
 
-void boxHeat() { setCoolingState(HEATING); }
-void boxCool() { setCoolingState(COOLING); }
-void boxOff() { setCoolingState(OFF); }
+void boxHeat() { setCoolingState(HEATING);  setMode(MODE_MANUAL); }
+void boxCool() { setCoolingState(COOLING);  setMode(MODE_MANUAL); }
+void boxOff() { setCoolingState(OFF);  setMode(MODE_MANUAL); }
 
 void setCoolingState(int state) {
   if ( state == coolingState ) return;
@@ -226,14 +244,32 @@ void setCoolingState(int state) {
       break;
   }
   coolingState = state;
-  redrawCoolingState(140, STATUS_Y);
+  redrawCoolingState();
 }
 
-void redrawCoolingState(int x, int y) {
+
+void redrawCoolingState() {
+  int x = 140;
+  int y = STATUS_Y;
   switch(coolingState) {
     case OFF:     s.drawText(x, y, "OFF ", YELLOW); break;
     case COOLING: s.drawText(x, y, "COOL", BLUE);   break;
     case HEATING: s.drawText(x, y, "HEAT", RED);    break;
+  }
+}
+
+void setMode(int newMode) {
+  if ( newMode == mode ) return;
+  mode = newMode;
+  redrawMode();
+}
+
+void redrawMode() {
+  int x = 140;
+  int y = STATUS_Y + 3*V_SEP;
+  switch(mode) {
+    case MODE_MANUAL: s.drawText(x, y, "MANUAL ", RED); break;
+    case MODE_AUTO:   s.drawText(x, y, "AUTO   ", GREEN); break;
   }
 }
 
@@ -261,6 +297,31 @@ void redrawTemperatureAndHumidity(int x, int y, int which) {
 
   lastTemperature[which] = temperature[which];
   lastHumidity[which] = humidity[which];
+}
+
+void tempMinus() { tempDiff(-1); }
+void tempPlus() { tempDiff(1); }
+void tempDiff(int diff) {
+  desiredTemperature += diff;
+  redrawDesiredValues();
+  setMode(MODE_AUTO);
+}
+
+void humidityMinus() { humidityDiff(-1); }
+void humidityPlus() { humidityDiff(1); }
+void humidityDiff(int diff) {
+  desiredHumidity += diff;
+  redrawDesiredValues();
+  setMode(MODE_AUTO);
+}
+void redrawDesiredValues() {
+  s.drawText(BUT_W+20, ROW3 + 5, "T:");
+  s.appendInt(desiredTemperature, 3);
+  s.appendChar('C');
+
+  s.drawText(BUT_W+20, ROW3 + 5 + BUT_W, "H:");
+  s.appendInt(desiredHumidity, 3);
+  s.appendChar('%');
 }
 
 void sensorTick() {
