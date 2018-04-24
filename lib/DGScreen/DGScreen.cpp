@@ -75,9 +75,14 @@ void DGScreen::drawText(int x, int y, const char *txt) {
 }
 
 void DGScreen::appendInt(int n, uint8_t digits) {
-  appendChar('0' + (n/100)%10);
-  appendChar('0' + (n/10)%10);
-  appendChar('0' + (n)%10);
+  int factor = 1;
+  for ( int i=0; i<digits-1; i++ ) {
+    factor *= 10;
+  }
+  while(factor >= 1) {
+    appendChar('0' + (n/factor)%10);
+    factor /= 10;
+  }
 }
 
 void DGScreen::appendChar(unsigned char c) {

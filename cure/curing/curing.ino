@@ -96,6 +96,7 @@ int count = 0;
 int mode = -1;
 
 int onIndicator = 0;
+int onCounter  = 0;
 
 
 /************************************** SETUP **********************************/
@@ -157,6 +158,9 @@ void loop() {
     ch[onIndicator] = '.';
     s.drawText(0, MAX_H - V_SEP, ch, YELLOW);
     onIndicator = ( onIndicator + 1 ) % 10;
+    s.appendInt(onCounter, 5);
+    if ( onIndicator == 0 )
+      onCounter++;
   }
 
   count++;
@@ -348,13 +352,22 @@ void redrawDesiredValues() {
 // sensor data.
 void autoTick() {
   if ( temperature[IN] != -1 ) {
-    // We have data
-    if ( temperature[IN] > desiredTemperature + 3 ) {
-      setCoolingState(COOLING);
-    } else if ( temperature[IN] < desiredTemperature - 3 ) {
-      setCoolingState(HEATING);
-    } else {
-      setCoolingState(OFF);
+    // We have real sensor data, let's act on it
+    switch(coolingState) {
+      case COOLING:
+        if ( temperature[IN] <= desiredTemperature )
+          setCoolingState(OFF);
+        break;
+      case HEATING:
+        if ( temperature[IN] >= desiredTemperature )
+          setCoolingState(OFF);
+        break;
+      case OFF:
+        if ( temperature[IN] >= desiredTemperature + 3 )
+          setCoolingState(COOLING);
+        else if ( temperature[IN] <= desiredTemperature - 3)
+          setCoolingState(HEATING);
+        break;
     }
   }
 
