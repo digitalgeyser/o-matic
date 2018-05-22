@@ -7,9 +7,6 @@
 
 #include <DS3231.h>
 
-DS3231 clock;
-RTCDateTime dt;
-
 #if defined(__SAM3X8E__)
     #undef __FlashStringHelper::F(string_literal)
     #define F(string_literal) string_literal
@@ -97,8 +94,10 @@ int lastHumidity[] = { -1, -1};
 int desiredHumidity = 20;
 int desiredTemperature = 15;
 
-int count = 0;
 int mode = -1;
+
+DS3231 clock;
+
 
 /************************************** SETUP **********************************/
 void setup(void) {
@@ -142,21 +141,57 @@ void setup(void) {
   clock.begin();
 }
 
+
 /******************************* LOOP ******************************************/
 void loop() {
-  if ( count%5000 == 0 )
-    sensorTick();
+  static int count = 0;
 
-    
-  if ( count%3000 == 0 && mode == MODE_AUTO )
-    autoTick();
-
-  if ( count%10000 == 0 ) { // About 40 seconds
-    clockTick();
+  if ( count%100 == 0 ) {
+    realTimeTick();
   }
 
   count++;
 
+  readTouchScreen();
+}
+
+// This method takes the unmeasured occasional tick and converts it to more accurate minute and seconds ticks
+void realTimeTick() {
+  static int lastSec = -1;
+  static int lastMin = -1;
+  RTCDateTime dt = clock.getDateTime();
+  
+  if ( dt.minute != lastMin ) {
+    minuteTick(dt.minute);
+    lastMin = dt.minute;
+    s.drawText(0, MAX_H - V_SEP, clock.dateFormat("m/d/Y H:i", dt), GREEN);
+    Serial.println("Minute.");
+  }
+
+  if ( dt.second != lastSec ) {
+    secondTick(dt.second);
+    lastSec = dt.second;
+    Serial.println("Second.");
+  }
+}
+
+void minuteTick(int minute) {
+  
+}
+
+void secondTick(int second) {
+  if ( second % 10 == 0 ) {
+    // Every 10 seconds, deal with sensors
+    sensorTick();
+  }
+
+  if ( second % 5 == 0 && mode == MODE_AUTO ) {
+    // Every 5 seconds readjust the automatics
+    autoTick();
+  }
+}
+
+void readTouchScreen() {
   digitalWrite(13, HIGH);
   TSPoint p = ts.getPoint();
   digitalWrite(13, LOW);
@@ -177,7 +212,7 @@ void loop() {
     } else {
       Serial.println("Empty touch!");
     }
-  }
+  }  
 }
 
 /*************************************************** Functions ****************************/
@@ -375,10 +410,6 @@ void autoTick() {
   }
 }
 
-void clockTick() {
-  dt = clock.getDateTime();
-  s.drawText(0, MAX_H - V_SEP, clock.dateFormat("m/d/Y H:i:s", dt), YELLOW);
-}
 
 void sensorTick() {
   // DHT11 read
