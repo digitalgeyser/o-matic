@@ -5,6 +5,11 @@
 #include <DGUtil.h>
 #include <DGScreen.h>
 
+#include <DS3231.h>
+
+DS3231 clock;
+RTCDateTime dt;
+
 #if defined(__SAM3X8E__)
     #undef __FlashStringHelper::F(string_literal)
     #define F(string_literal) string_literal
@@ -95,10 +100,6 @@ int desiredTemperature = 15;
 int count = 0;
 int mode = -1;
 
-int onIndicator = 0;
-int onCounter  = 0;
-
-
 /************************************** SETUP **********************************/
 void setup(void) {
   Serial.begin(9600);
@@ -137,6 +138,8 @@ void setup(void) {
   setDiffuser(OFF);
   digitalWrite(UNUSED_RELAY, HIGH);
   redrawDesiredValues();
+
+  clock.begin();
 }
 
 /******************************* LOOP ******************************************/
@@ -144,23 +147,12 @@ void loop() {
   if ( count%5000 == 0 )
     sensorTick();
 
+    
   if ( count%3000 == 0 && mode == MODE_AUTO )
     autoTick();
 
-  if ( count%50 == 0 ) {
-    char ch[11];
-    ch[10] = '\0';
-
-    int i;
-    for ( i=0; i<10; i++ ) {
-      ch[i] = ' ';
-    }
-    ch[onIndicator] = '.';
-    s.drawText(0, MAX_H - V_SEP, ch, YELLOW);
-    onIndicator = ( onIndicator + 1 ) % 10;
-    s.appendInt(onCounter, 5);
-    if ( onIndicator == 0 )
-      onCounter++;
+  if ( count%10000 == 0 ) { // About 40 seconds
+    clockTick();
   }
 
   count++;
@@ -383,6 +375,11 @@ void autoTick() {
   }
 }
 
+void clockTick() {
+  dt = clock.getDateTime();
+  s.drawText(0, MAX_H - V_SEP, clock.dateFormat("m/d/Y H:i:s", dt), YELLOW);
+}
+
 void sensorTick() {
   // DHT11 read
   for ( int i=0; i<2; i++ ) {
@@ -417,6 +414,7 @@ void sensorTick() {
       Serial.print(temperature[which]);
       Serial.print(", h=");
       Serial.print(humidity[which]);
+      Serial.println("");
       redrawTemperatureAndHumidity(0, STATUS_Y + 2*i*V_SEP, which);
     }
   }
