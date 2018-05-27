@@ -42,7 +42,8 @@
 #define TEMPERATURE_HUMIDITY_SENSOR_IN_PIN 35
 #define TEMPERATURE_HUMIDITY_SENSOR_OUT_PIN 45
 
-#define PUMP_TRANSISTOR_PIN 44
+#define HUMID_PUMP_TRANSISTOR_PIN 44
+#define DRY_PUMP_TRANSISTOR_PIN 42
 
 #define DIFFUSER_RELAY 26
 #define UNUSED_RELAY 24
@@ -51,6 +52,9 @@
 #define ON 1
 #define COOLING 1
 #define HEATING 2
+
+#define HUMIDIFYING 1
+#define DRYING 2
 
 #define MODE_AUTO 1
 #define MODE_MANUAL 0
@@ -81,17 +85,16 @@ SimpleDHT11 dht11;
 
 // State of stuff: -1 is initial state.
 int coolingState = -1; // OFF, COOLING, HEATING
-int pumpState = -1; // ON, OFF
+int humidifyingState = -1; // OFF, DRYING, HUMIDIFYING
 int diffuserState = -1; // ON, OFF
 
-int oldcolor, currentcolor;
 byte temperature[] = { 0, 0 };
 byte humidity[] = { 0, 0 };
 
 int lastTemperature[] = { -500, -500 };
 int lastHumidity[] = { -1, -1};
 
-int desiredHumidity = 20;
+int desiredHumidity = 70;
 int desiredTemperature = 15;
 
 int mode = -1;
@@ -109,16 +112,15 @@ void setup(void) {
   Serial.println(F("Screen setup, filling it BLACK."));
   s.clearScreen();
 
-  s.addButton(0, 0, BUT_W, BUT_H, RED, boxHeat, false);
-  s.addButton(BUT_W, 0, BUT_W, BUT_H, BLUE, boxCool, false);
-  s.addButton(BUT_W*2, 0, BUT_W, BUT_H, YELLOW, boxOff, false);
+  s.addButton(0,       0, BUT_W, BUT_H, BLUE, boxCool, false);
+  s.addButton(BUT_W,   0, BUT_W, BUT_H, YELLOW, boxOff, true);
+  s.addButton(BUT_W*2, 0, BUT_W, BUT_H, RED, boxHeat, false);
+  s.addButton(BUT_W*3, 0, BUT_W, BUT_H, CYAN, diffuserOn, false);
 
-  currentcolor = RED;
-
-  s.addButton(0, BUT_H+5, BUT_W, BUT_H, CYAN, pumpOn, false);
-  s.addButton(BUT_W, BUT_H+5, BUT_W, BUT_H, CYAN, pumpOff, true);
-  s.addButton(BUT_W*2, BUT_H+5, BUT_W, BUT_H, GREEN, diffuserOn, false);
-  s.addButton(BUT_W*3, BUT_H+5, BUT_W, BUT_H, GREEN, diffuserOff, true);
+  s.addButton(0,       BUT_H+5, BUT_W, BUT_H, BLUE, pumpHumid, false);
+  s.addButton(BUT_W,   BUT_H+5, BUT_W, BUT_H, YELLOW, pumpOff, true);
+  s.addButton(BUT_W*2, BUT_H+5, BUT_W, BUT_H, RED, pumpDry, false);
+  s.addButton(BUT_W*3, BUT_H+5, BUT_W, BUT_H, CYAN, diffuserOff, true);
 
   s.addButton(0, ROW3, BUT_W, BUT_H, BLUE, tempMinus, true);
   s.addButton(MAX_W - BUT_W, ROW3, BUT_W, BUT_H, RED, tempPlus, true);
@@ -130,7 +132,8 @@ void setup(void) {
   pinMode(POLARITY_RELAY_2, OUTPUT);
   pinMode(DIFFUSER_RELAY, OUTPUT);
   pinMode(UNUSED_RELAY, OUTPUT);
-  pinMode(PUMP_TRANSISTOR_PIN, OUTPUT);
+  pinMode(HUMID_PUMP_TRANSISTOR_PIN, OUTPUT);
+  pinMode(DRY_PUMP_TRANSISTOR_PIN, OUTPUT);
   setMode(MODE_MANUAL);
   setCoolingState(OFF);
   setPump(OFF);
@@ -244,29 +247,39 @@ void redrawDiffuserState() {
 }
 
 
-void pumpOn() { setPump(ON);  setMode(MODE_MANUAL); }
+void pumpHumid() { setPump(HUMIDIFYING);  setMode(MODE_MANUAL); }
+void pumpDry() { setPump(DRYING);  setMode(MODE_MANUAL); }
 void pumpOff() { setPump(OFF);  setMode(MODE_MANUAL); }
 void setPump(int state) {
-  if ( pumpState == state ) return;
+  if ( humidifyingState == state ) return;
   switch(state) {
-    case ON:
-      digitalWrite(PUMP_TRANSISTOR_PIN, HIGH);
-      Serial.println(F("Pump on."));
+    case HUMIDIFYING:
+      digitalWrite(DRY_PUMP_TRANSISTOR_PIN, LOW);
+      digitalWrite(HUMID_PUMP_TRANSISTOR_PIN, HIGH);
+      Serial.println(F("Pump humidifying."));
+      break;
+    case DRYING:
+      digitalWrite(HUMID_PUMP_TRANSISTOR_PIN, LOW);
+      digitalWrite(DRY_PUMP_TRANSISTOR_PIN, HIGH);
+      Serial.println(F("Pump drying."));
       break;
     case OFF:
-      digitalWrite(PUMP_TRANSISTOR_PIN, LOW);
+      digitalWrite(HUMID_PUMP_TRANSISTOR_PIN, LOW);
+      digitalWrite(DRY_PUMP_TRANSISTOR_PIN, LOW);
       Serial.println(F("Pump off."));
       break;
   }
-  pumpState = state;
+  humidifyingState = state;
   redrawPumpState();
 }
+
 void redrawPumpState() {
   int x = 140;
   int y = STATUS_Y + V_SEP;
-  switch(pumpState) {
-    case OFF: s.drawText(x, y, "AIR OFF", YELLOW); break;
-    case ON:  s.drawText(x, y, "AIR ON ", BLUE); break;
+  switch(humidifyingState) {
+    case OFF:          s.drawText(x, y, "PMP OFF", YELLOW); break;
+    case HUMIDIFYING:  s.drawText(x, y, "HUMID  ", BLUE); break;
+    case DRYING:       s.drawText(x, y, "DRY    ", RED); break;
   }
 }
 
@@ -303,9 +316,9 @@ void redrawCoolingState() {
   int x = 140;
   int y = STATUS_Y;
   switch(coolingState) {
-    case OFF:     s.drawText(x, y, "OFF ", YELLOW); break;
-    case COOLING: s.drawText(x, y, "COOL", BLUE);   break;
-    case HEATING: s.drawText(x, y, "HEAT", RED);    break;
+    case OFF:     s.drawText(x, y, "HC OFF ", YELLOW); break;
+    case COOLING: s.drawText(x, y, "COOL   ", BLUE);   break;
+    case HEATING: s.drawText(x, y, "HEAT   ", RED);    break;
   }
 }
 
@@ -401,11 +414,14 @@ void autoTick() {
   if ( humidity[IN] != -1 ) {
     // We have data
     if ( humidity[IN] > desiredHumidity + 3 ) {
-      setPump(OFF);
+      setPump(DRYING);
       setDiffuser(OFF);
     } else if ( humidity[IN] < desiredHumidity - 3 ) {
-      setPump(ON);
+      setPump(HUMIDIFYING);
       setDiffuser(ON);
+    } else {
+      setPump(OFF);
+      setDiffuser(OFF);
     }
   }
 }
