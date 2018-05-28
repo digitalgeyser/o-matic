@@ -1,7 +1,7 @@
 // (c) Digital Geyser, 2018
 
 #include <TouchScreen.h>
-#include <SimpleDHT.h>
+#include <DHT.h>
 #include <DGUtil.h>
 #include <DGScreen.h>
 
@@ -81,7 +81,8 @@
 TouchScreen ts = TouchScreen(XP, YP, XM, YM, 300);
 
 DGScreen s(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
-SimpleDHT11 dht11;
+DHT insideSensor(TEMPERATURE_HUMIDITY_SENSOR_IN_PIN, DHT22);
+DHT outsideSensor(TEMPERATURE_HUMIDITY_SENSOR_OUT_PIN, DHT11);
 
 // State of stuff: -1 is initial state.
 int coolingState = -1; // OFF, COOLING, HEATING
@@ -435,16 +436,17 @@ void sensorTick() {
     int which = ( i == 0 ? IN : OUT);
     bool success = false;
     int retries = 3;
+    DHT *dhtToUse = (which == IN ? &insideSensor : &outsideSensor );
     while(retries>0) {
-      if (dht11.read(which==IN
-                      ? TEMPERATURE_HUMIDITY_SENSOR_IN_PIN
-                      : TEMPERATURE_HUMIDITY_SENSOR_OUT_PIN,
-                    &(temperature[which]),
-                    &(humidity[which]),
-                    NULL)) {
+      float t = dhtToUse->readTemperature();
+      float h = dhtToUse->readHumidity();
+        
+      if ( isnan(t) || isnan(h) ) {
         retries--;
         success = false;
       } else {
+        temperature[which] = (int)t;
+        humidity[which] = (int)h;
         success = true;
         break;
       }
