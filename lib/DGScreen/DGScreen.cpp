@@ -8,8 +8,8 @@
 
 DGScreen::DGScreen(uint8_t cs, uint8_t cd, uint8_t wr, uint8_t rd, uint8_t reset) {
    tft = new Elegoo_TFTLCD(cs, cd, wr, rd, reset);
-   verticalSeparation = 20;
-   horizontalSeparation = 13;
+   verticalSeparation = 10;
+   horizontalSeparation = 7;
    charSize = 2;
    fg = WHITE;
    bg = BLACK;
@@ -59,6 +59,16 @@ void DGScreen::fillCircle(int16_t x0, int16_t y0, int16_t r, DGColor color) {
   tft -> fillCircle(x0, y0, r, color);
 }
 
+void DGScreen::drawText(int x, int y, const char *txt, DGColor fg, DGColor bg) {
+  DGColor currentFg = this->fg;
+  DGColor currentBg = this->bg;
+  setFg(fg);
+  setBg(bg);
+  drawText(x, y, txt);
+  setFg(currentFg);
+  setBg(currentBg);
+}
+
 void DGScreen::drawText(int x, int y, const char *txt, DGColor fg) {
   DGColor currentFg = this->fg;
   setFg(fg);
@@ -68,9 +78,9 @@ void DGScreen::drawText(int x, int y, const char *txt, DGColor fg) {
 
 void DGScreen::drawText(int x, int y, const char *txt) {
   int i, n = strlen(txt);
-  fillRect(x, y, n*horizontalSeparation, verticalSeparation, bg);
+  fillRect(x, y, n*charSize*horizontalSeparation, charSize*verticalSeparation, bg);
   for ( i = 0; i<n; i++ ) {
-    drawChar(x+i*horizontalSeparation, y, txt[i]);
+    drawChar(x+i*charSize*horizontalSeparation, y, txt[i]);
   }
 }
 
@@ -91,7 +101,7 @@ void DGScreen::appendChar(unsigned char c) {
 
 void DGScreen::drawChar(int16_t x, int16_t y, unsigned char c) {
   tft -> drawChar(x, y, c, fg, bg, charSize);
-  nextCharX = x+horizontalSeparation;
+  nextCharX = x+charSize*horizontalSeparation;
   nextCharY = y;
 }
 
@@ -109,7 +119,7 @@ boolean DGScreen::processTouch(int16_t x, int16_t y) {
   return false;
 }
 
-void DGScreen::addButton(int16_t x0, int16_t y0, int16_t w, int16_t h, DGColor color, DGScreenCallback callback, boolean isHollow) {
+void DGScreen::addButton(int16_t x0, int16_t y0, int16_t w, int16_t h, const char *txt, DGColor color, DGColor textColor, DGScreenCallback callback, boolean isHollow) {
   DGScreenArea *a = new DGScreenArea;
   a->x0 = x0;
   a->y0 = y0;
@@ -121,6 +131,12 @@ void DGScreen::addButton(int16_t x0, int16_t y0, int16_t w, int16_t h, DGColor c
   this->fillRoundRect(x0, y0, w, h, w/5, color);
   if ( isHollow ) {
     this->fillRoundRect(x0+5, y0+5, w-10, h-10, w/5, BLACK);
+  }
+  if ( txt != NULL ) {
+    int oldCharSize = this->charSize;
+    this->charSize = 1;
+    this->drawText(x0+10, y0 + (h/2) - verticalSeparation/2, txt, textColor, (isHollow?BLACK:color));
+    this->charSize = oldCharSize;
   }
 }
 

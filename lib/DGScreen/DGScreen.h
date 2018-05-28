@@ -50,11 +50,12 @@ class DGScreen {
     void appendInt(int n, uint8_t digits);
     void drawText(int x, int y, const char *txt);
     void drawText(int x, int y, const char *txt, DGColor fg);
+    void drawText(int x, int y, const char *txt, DGColor fg, DGColor bg);
     void setColor(DGColor fg, DGColor bg);
     void setBg(DGColor bg);
     void setFg(DGColor fg);
     boolean processTouch(int16_t x, int16_t y);
-    void addButton(int16_t x0, int16_t y0, int16_t w, int16_t h, DGColor color, DGScreenCallback callback, boolean isHollow);
+    void addButton(int16_t x0, int16_t y0, int16_t w, int16_t h, const char *txt, DGColor color, DGColor textColor, DGScreenCallback callback, boolean isHollow);
 
 
   private:

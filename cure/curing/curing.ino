@@ -112,20 +112,20 @@ void setup(void) {
   Serial.println(F("Screen setup, filling it BLACK."));
   s.clearScreen();
 
-  s.addButton(0,       0, BUT_W, BUT_H, BLUE, boxCool, false);
-  s.addButton(BUT_W,   0, BUT_W, BUT_H, YELLOW, boxOff, true);
-  s.addButton(BUT_W*2, 0, BUT_W, BUT_H, RED, boxHeat, false);
-  s.addButton(BUT_W*3, 0, BUT_W, BUT_H, CYAN, diffuserOn, false);
+  s.addButton(0,       0, BUT_W, BUT_H, "Cool", BLUE, BLACK, boxCool, false);
+  s.addButton(BUT_W,   0, BUT_W, BUT_H, "Off", YELLOW, YELLOW, boxOff, true);
+  s.addButton(BUT_W*2, 0, BUT_W, BUT_H, "Heat", RED, BLACK, boxHeat, false);
+  s.addButton(BUT_W*3, 0, BUT_W, BUT_H, "Dif On", CYAN, BLACK, diffuserOn, false);
 
-  s.addButton(0,       BUT_H+5, BUT_W, BUT_H, BLUE, pumpHumid, false);
-  s.addButton(BUT_W,   BUT_H+5, BUT_W, BUT_H, YELLOW, pumpOff, true);
-  s.addButton(BUT_W*2, BUT_H+5, BUT_W, BUT_H, RED, pumpDry, false);
-  s.addButton(BUT_W*3, BUT_H+5, BUT_W, BUT_H, CYAN, diffuserOff, true);
+  s.addButton(0,       BUT_H+5, BUT_W, BUT_H, "Humid", BLUE,   BLACK, pumpHumid, false);
+  s.addButton(BUT_W,   BUT_H+5, BUT_W, BUT_H, "Off", YELLOW, YELLOW, pumpOff,   true);
+  s.addButton(BUT_W*2, BUT_H+5, BUT_W, BUT_H, "Dry", RED,    BLACK, pumpDry,   false);
+  s.addButton(BUT_W*3, BUT_H+5, BUT_W, BUT_H, "Df Off", CYAN, CYAN, diffuserOff, true);
 
-  s.addButton(0, ROW3, BUT_W, BUT_H, BLUE, tempMinus, true);
-  s.addButton(MAX_W - BUT_W, ROW3, BUT_W, BUT_H, RED, tempPlus, true);
-  s.addButton(0, ROW3 + BUT_H + 5, BUT_W, BUT_H, YELLOW, humidityMinus, true);
-  s.addButton(MAX_W - BUT_W, ROW3 + BUT_H + 5, BUT_W, BUT_H, GREEN, humidityPlus, true);
+  s.addButton(0,             ROW3,             BUT_W, BUT_H, "Cool",  BLUE,   BLUE,   tempMinus,     true);
+  s.addButton(MAX_W - BUT_W, ROW3,             BUT_W, BUT_H, "Heat",  RED,    RED,    tempPlus,      true);
+  s.addButton(0,             ROW3 + BUT_H + 5, BUT_W, BUT_H, "Dry", YELLOW, YELLOW, humidityMinus, true);
+  s.addButton(MAX_W - BUT_W, ROW3 + BUT_H + 5, BUT_W, BUT_H, "Humid", GREEN,  GREEN,  humidityPlus,  true);
 
   pinMode(13, OUTPUT);
   pinMode(POLARITY_RELAY_1, OUTPUT);
@@ -141,7 +141,9 @@ void setup(void) {
   digitalWrite(UNUSED_RELAY, HIGH);
   redrawDesiredValues();
 
+  Serial.println(F("Starting RTC."));
   clock.begin();
+  Serial.println(F("Setup done."));
 }
 
 
