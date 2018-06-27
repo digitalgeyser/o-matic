@@ -5,6 +5,8 @@
 #include <DGUtil.h>
 #include <DGScreen.h>
 
+#include "box_programs.h"
+
 #include <DS3231.h>
 
 #if defined(__SAM3X8E__)
