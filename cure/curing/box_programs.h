@@ -34,15 +34,18 @@ const BoxProgramPhase program2Phases[] = {
   { 20, 40, 40, 60, 100 },
 };
 
+// Once you have all the program phases above,
+// create the "BoxProgram" block that contains
+// name, the number of phases (use sizeof()) and the actual phases.
 const BoxProgram defaultPrograms[] = {
   {
     "Program1",
-    2,
+    sizeof(program1Phases)/sizeof(BoxProgramPhase),
     program1Phases
   },
   {
     "Program2",
-    1,
+    sizeof(program2Phases)/sizeof(BoxProgramPhase),
     program2Phases
   }
 };
