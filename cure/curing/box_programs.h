@@ -12,6 +12,7 @@ typedef struct {
 
 typedef struct {
   const char *programName;
+  const char *programDescription;
   int numberOfPhases;
   const BoxProgramPhase *phases;
 } BoxProgram;
@@ -40,11 +41,13 @@ const BoxProgramPhase program2Phases[] = {
 const BoxProgram defaultPrograms[] = {
   {
     "Program1",
+    "This program is used to cure something yummy.",
     sizeof(program1Phases)/sizeof(BoxProgramPhase),
     program1Phases
   },
   {
     "Program2",
+    "This program is used to cure something even more yummy.",
     sizeof(program2Phases)/sizeof(BoxProgramPhase),
     program2Phases
   }
