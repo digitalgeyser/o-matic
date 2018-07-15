@@ -66,6 +66,7 @@ class DGScreen {
     DGColor fg, bg;
     uint16_t nextCharX, nextCharY;
     DGScreenArea *area;
+    uint8_t rotation = 0;
 };
 
 #endif

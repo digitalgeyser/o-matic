@@ -66,8 +66,6 @@
 #define STATUS_Y ((BUT_H * 2) + 15)
 #define ROW3 (STATUS_Y + 4*V_SEP + 10)
 
-#define MAX_W 240
-#define MAX_H 320
 
 #define IN 0
 #define OUT 1
@@ -110,7 +108,7 @@ void setup(void) {
   Serial.begin(9600);
   Serial.println(F("Paint!"));
 
-  s.setup(GREEN, BLACK, 2);
+  s.setup(GREEN, BLACK, 0);
 
   Serial.println(F("Screen setup, filling it BLACK."));
   s.clearScreen();
@@ -126,9 +124,9 @@ void setup(void) {
   s.addButton(BUT_W*3, BUT_H+5, BUT_W, BUT_H, "Df Off", CYAN, CYAN, diffuserOff, true);
 
   s.addButton(0,             ROW3,             BUT_W, BUT_H, "Cool",  BLUE,   BLUE,   tempMinus,     true);
-  s.addButton(MAX_W - BUT_W, ROW3,             BUT_W, BUT_H, "Heat",  RED,    RED,    tempPlus,      true);
+  s.addButton(s.width() - BUT_W, ROW3,             BUT_W, BUT_H, "Heat",  RED,    RED,    tempPlus,      true);
   s.addButton(0,             ROW3 + BUT_H + 5, BUT_W, BUT_H, "Dry", YELLOW, YELLOW, humidityMinus, true);
-  s.addButton(MAX_W - BUT_W, ROW3 + BUT_H + 5, BUT_W, BUT_H, "Humid", GREEN,  GREEN,  humidityPlus,  true);
+  s.addButton(s.width() - BUT_W, ROW3 + BUT_H + 5, BUT_W, BUT_H, "Humid", GREEN,  GREEN,  humidityPlus,  true);
 
   pinMode(13, OUTPUT);
   pinMode(POLARITY_RELAY_1, OUTPUT);
@@ -172,7 +170,7 @@ void realTimeTick() {
   if ( dt.minute != lastMin ) {
     minuteTick(dt.minute);
     lastMin = dt.minute;
-    s.drawText(0, MAX_H - V_SEP, clock.dateFormat("m/d/Y H:i", dt), GREEN);
+    s.drawText(0, s.height() - V_SEP, clock.dateFormat("m/d/Y H:i", dt), GREEN);
     Serial.println("Minute.");
   }
 

@@ -106,6 +106,10 @@ void DGScreen::drawChar(int16_t x, int16_t y, unsigned char c) {
 }
 
 boolean DGScreen::processTouch(int16_t x, int16_t y) {
+  switch(rotation) {
+    case 0: x = width() - x; y = height() - y; break;
+    case 2: break;
+  }
   DGScreenArea *finger = this->area;
   while(finger != NULL ) {
     if ( x >= finger->x0 && x <= finger->x1 && y >= finger->y0 && y <= finger->y1 ) {
@@ -178,5 +182,5 @@ void DGScreen::setup(DGColor fg, DGColor bg, uint8_t rotation) {
 
   tft->begin(identifier);
   tft->setRotation(rotation);
-
+  this->rotation = rotation;
 }
