@@ -1,7 +1,7 @@
 /*
  * (c) Digital Geyser.
  *
- * 2x16 LCD library.
+ * Screen library.
  */
 
 #include "DGScreen.h"
@@ -11,32 +11,30 @@ DGScreen::DGScreen(uint8_t cs, uint8_t cd, uint8_t wr, uint8_t rd, uint8_t reset
    verticalSeparation = 10;
    horizontalSeparation = 7;
    charSize = 2;
-   fg = WHITE;
-   bg = BLACK;
    nextCharX = 0;
    nextCharY = 0;
-   area = NULL;
+   currentPage = firstPage = new DGScreenPage("Home", WHITE, BLACK);
 }
 
 void DGScreen::setColor(DGColor fg, DGColor bg) {
-  this->fg = fg;
-  this->bg = bg;
+  currentPage->setFg(fg);
+  currentPage->setBg(bg);
 }
 
 void DGScreen::setFg(DGColor fg) {
-  this->fg = fg;
+  currentPage->setFg(fg);
 }
 
 void DGScreen::setBg(DGColor bg) {
-  this->bg = bg;
+  currentPage->setBg(bg);
 }
 
 void DGScreen::clearScreen() {
-  fillScreen(bg);
+  fillScreen(currentPage->bg());
 }
 
 void DGScreen::clearRect(int16_t x, int16_t y, int16_t w, int16_t h) {
-  fillRect(x, y, w, h, bg);
+  fillRect(x, y, w, h, currentPage->bg());
 }
 
 int16_t DGScreen::width() { return tft->width(); }
@@ -60,8 +58,8 @@ void DGScreen::fillCircle(int16_t x0, int16_t y0, int16_t r, DGColor color) {
 }
 
 void DGScreen::drawText(int x, int y, const char *txt, DGColor fg, DGColor bg) {
-  DGColor currentFg = this->fg;
-  DGColor currentBg = this->bg;
+  DGColor currentFg = currentPage->fg();
+  DGColor currentBg = currentPage->bg();
   setFg(fg);
   setBg(bg);
   drawText(x, y, txt);
@@ -70,7 +68,7 @@ void DGScreen::drawText(int x, int y, const char *txt, DGColor fg, DGColor bg) {
 }
 
 void DGScreen::drawText(int x, int y, const char *txt, DGColor fg) {
-  DGColor currentFg = this->fg;
+  DGColor currentFg = currentPage->fg();
   setFg(fg);
   drawText(x, y, txt);
   setFg(currentFg);
@@ -78,7 +76,7 @@ void DGScreen::drawText(int x, int y, const char *txt, DGColor fg) {
 
 void DGScreen::drawText(int x, int y, const char *txt) {
   int i, n = strlen(txt);
-  fillRect(x, y, n*charSize*horizontalSeparation, charSize*verticalSeparation, bg);
+  fillRect(x, y, n*charSize*horizontalSeparation, charSize*verticalSeparation, currentPage->bg());
   for ( i = 0; i<n; i++ ) {
     drawChar(x+i*charSize*horizontalSeparation, y, txt[i]);
   }
@@ -100,7 +98,7 @@ void DGScreen::appendChar(unsigned char c) {
 }
 
 void DGScreen::drawChar(int16_t x, int16_t y, unsigned char c) {
-  tft -> drawChar(x, y, c, fg, bg, charSize);
+  tft -> drawChar(x, y, c, currentPage->fg(), currentPage->bg(), charSize);
   nextCharX = x+charSize*horizontalSeparation;
   nextCharY = y;
 }
@@ -110,7 +108,7 @@ boolean DGScreen::processTouch(int16_t x, int16_t y) {
     case 0: x = width() - x; y = height() - y; break;
     case 2: break;
   }
-  DGScreenArea *finger = this->area;
+  DGScreenArea *finger = currentPage->area();
   while(finger != NULL ) {
     if ( x >= finger->x0 && x <= finger->x1 && y >= finger->y0 && y <= finger->y1 ) {
       if ( finger->callback != NULL ) {
@@ -118,7 +116,7 @@ boolean DGScreen::processTouch(int16_t x, int16_t y) {
         return true;
       }
     }
-    finger = finger->next;
+    finger = finger->nextArea;
   }
   return false;
 }
@@ -130,8 +128,7 @@ void DGScreen::addButton(int16_t x0, int16_t y0, int16_t w, int16_t h, const cha
   a->x1 = x0+w;
   a->y1 = y0+h;
   a->callback = callback;
-  a->next = this->area;
-  this->area = a;
+  currentPage->addArea(a);
   this->fillRoundRect(x0, y0, w, h, w/5, color);
   if ( isHollow ) {
     this->fillRoundRect(x0+5, y0+5, w-10, h-10, w/5, BLACK);

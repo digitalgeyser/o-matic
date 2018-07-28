@@ -1,7 +1,7 @@
 /*
  * (c) Digital Geyser.
  *
- * 2.8" TFT screen library
+ * Screen library.
  */
 
 #ifndef DGScreen_h
@@ -30,8 +30,24 @@ typedef struct _DGScreenArea {
   uint16_t x1;
   uint16_t y1;
   DGScreenCallback callback;
-  struct _DGScreenArea *next;
+  struct _DGScreenArea *nextArea;
 } DGScreenArea;
+
+class DGScreenPage {
+  public:
+    DGScreenPage(const char *title, DGColor fg, DGColor bg);
+    DGScreenArea *area();
+    void addArea(DGScreenArea *area);
+    void setBg(DGColor bg);
+    void setFg(DGColor fg);
+    DGColor fg();
+    DGColor bg();
+  private:
+    const char *title;
+    DGColor bgColor, fgColor;
+    DGScreenPage *nextPage;
+    DGScreenArea *firstArea;
+};
 
 class DGScreen {
   public:
@@ -57,15 +73,13 @@ class DGScreen {
     boolean processTouch(int16_t x, int16_t y);
     void addButton(int16_t x0, int16_t y0, int16_t w, int16_t h, const char *txt, DGColor color, DGColor textColor, DGScreenCallback callback, boolean isHollow);
 
-
   private:
     Elegoo_TFTLCD *tft;
     uint8_t verticalSeparation;
     uint8_t horizontalSeparation;
     uint8_t charSize;
-    DGColor fg, bg;
     uint16_t nextCharX, nextCharY;
-    DGScreenArea *area;
+    DGScreenPage *firstPage, *currentPage;
     uint8_t rotation = 0;
 };
 
