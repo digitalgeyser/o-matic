@@ -1,6 +1,5 @@
 // (c) Digital Geyser, 2018
 
-#include <TouchScreen.h>
 #include <DHT.h>
 #include <DGUtil.h>
 #include <DGScreen.h>
@@ -15,18 +14,6 @@
 #endif
 
 /************************ MACROS **********************************/
-
-#define YP A3  // must be an analog pin, use "An" notation!
-#define XM A2  // must be an analog pin, use "An" notation!
-#define YM 9   // can be a digital pin
-#define XP 8   // can be a digital pin
-
-//Touch For New ILI9341 TP
-#define TS_MINX 120
-#define TS_MAXX 900
-
-#define TS_MINY 70
-#define TS_MAXY 920
 
 #define V_SEP 20
 #define H_SEP 13
@@ -70,15 +57,7 @@
 #define IN 0
 #define OUT 1
 
-#define MINPRESSURE 10
-#define MAXPRESSURE 1000
-
 /********************************  STATE *******************************/
-
-// For better pressure precision, we need to know the resistance
-// between X+ and X- Use any multimeter to read it
-// For the one we're using, its 300 ohms across the X plate
-TouchScreen ts = TouchScreen(XP, YP, XM, YM, 300);
 
 DGScreen s(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
 DHT insideSensor(TEMPERATURE_HUMIDITY_SENSOR_IN_PIN, DHT22);
@@ -108,7 +87,7 @@ void setup(void) {
   Serial.begin(9600);
   Serial.println(F("Paint!"));
 
-  s.setup(GREEN, BLACK, ROTATION_NORMAL);
+  s.setup(GREEN, BLACK, 0);
 
   Serial.println(F("Screen setup, filling it BLACK."));
   s.clearScreen();
@@ -158,7 +137,7 @@ void loop() {
 
   count++;
 
-  readTouchScreen();
+  s.touchScreen();
 }
 
 // This method takes the unmeasured occasional tick and converts it to more accurate minute and seconds ticks
@@ -166,7 +145,7 @@ void realTimeTick() {
   static int lastSec = -1;
   static int lastMin = -1;
   RTCDateTime dt = clock.getDateTime();
-
+  
   if ( dt.minute != lastMin ) {
     minuteTick(dt.minute);
     lastMin = dt.minute;
@@ -182,7 +161,7 @@ void realTimeTick() {
 }
 
 void minuteTick(int minute) {
-
+  
 }
 
 void secondTick(int second) {
@@ -194,30 +173,6 @@ void secondTick(int second) {
   if ( second % 5 == 0 && mode == MODE_AUTO ) {
     // Every 5 seconds readjust the automatics
     autoTick();
-  }
-}
-
-void readTouchScreen() {
-  digitalWrite(13, HIGH);
-  TSPoint p = ts.getPoint();
-  digitalWrite(13, LOW);
-
-  pinMode(XM, OUTPUT);
-  pinMode(YP, OUTPUT);
-
-  // we have some minimum pressure we consider 'valid'
-  // pressure of 0 means no pressing!
-  if (p.z > MINPRESSURE && p.z < MAXPRESSURE) {
-
-    // scale from 0->1023 to tft.width
-    p.x = map(p.x, TS_MINX, TS_MAXX, s.width(), 0);
-    p.y = (s.height()-map(p.y, TS_MINY, TS_MAXY, s.height(), 0));
-
-    if ( s.processTouch(p.x, p.y) ) {
-      Serial.println("Process touch!");
-    } else {
-      Serial.println("Empty touch!");
-    }
   }
 }
 
@@ -440,7 +395,7 @@ void sensorTick() {
     while(retries>0) {
       float t = dhtToUse->readTemperature();
       float h = dhtToUse->readHumidity();
-
+        
       if ( isnan(t) || isnan(h) ) {
         retries--;
         success = false;

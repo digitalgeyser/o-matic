@@ -6,8 +6,21 @@
 
 #include "DGScreen.h"
 
+#define YP A3  // must be an analog pin, use "An" notation!
+#define XM A2  // must be an analog pin, use "An" notation!
+#define YM 9   // can be a digital pin
+#define XP 8   // can be a digital pin
+
+#define MINPRESSURE 10
+#define MAXPRESSURE 1000
+
 DGScreen::DGScreen(uint8_t cs, uint8_t cd, uint8_t wr, uint8_t rd, uint8_t reset) {
    tft = new Elegoo_TFTLCD(cs, cd, wr, rd, reset);
+
+   // For better pressure precision, we need to know the resistance
+   // between X+ and X- Use any multimeter to read it
+   // For the one we're using, its 300 ohms across the X plate
+   ts = new TouchScreen(XP, YP, XM, YM, 300);
    verticalSeparation = 10;
    horizontalSeparation = 7;
    charSize = 2;
@@ -103,22 +116,48 @@ void DGScreen::drawChar(int16_t x, int16_t y, unsigned char c) {
   nextCharY = y;
 }
 
+void DGScreen::touchScreen() {
+  digitalWrite(13, HIGH);
+  TSPoint p = ts->getPoint();
+  digitalWrite(13, LOW);
+
+  pinMode(XM, OUTPUT);
+  pinMode(YP, OUTPUT);
+
+  // we have some minimum pressure we consider 'valid'
+  // pressure of 0 means no pressing!
+  if (p.z > MINPRESSURE && p.z < MAXPRESSURE) {
+    processTouch(p.x, p.y);
+  }
+}
+
+//Touch For New ILI9341 TP
+#define TS_MINX 120
+#define TS_MAXX 900
+
+#define TS_MINY 70
+#define TS_MAXY 920
+
 boolean DGScreen::processTouch(int16_t x, int16_t y) {
   switch(rotation) {
-    case ROTATION_UPSIDE_DOWN:
-      // For some reason this is normal for the touch.
-      break;
+    int16_t tmp;
     case ROTATION_NORMAL:
-      x = width() - x;
-      y = height() - y;
+      x = map(x, TS_MINX, TS_MAXX, 0, width());
+      y = map(y, TS_MINY, TS_MAXY, height(), 0);
       break;
-    case ROTATION_SIDEWAYS_LEFT:
-      x = height() - y;
-      y = x;
+    case ROTATION_UPSIDE_DOWN:
+      x = map(x, TS_MINX, TS_MAXX, width(), 0);
+      y = map(y, TS_MINY, TS_MAXY, 0, height());
       break;
     case ROTATION_SIDEWAYS_RIGHT:
-      x = y;
-      y = width() - x;
+      tmp = y;
+      y = map(x, TS_MINX, TS_MAXX, height(), 0);
+      x = map(tmp, TS_MINY, TS_MAXY, width(), 0);
+      break;
+    case ROTATION_SIDEWAYS_LEFT:
+      tmp = y;
+      y = map(x, TS_MINX, TS_MAXX, 0, height());
+      x = map(tmp, TS_MINY, TS_MAXY, 0, width());
       break;
   }
   DGScreenArea *finger = currentPage->area();

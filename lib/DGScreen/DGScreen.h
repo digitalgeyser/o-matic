@@ -10,6 +10,8 @@
 #include <Elegoo_GFX.h>    // Core graphics library
 #include <Elegoo_TFTLCD.h> // Hardware-specific library
 
+#include <TouchScreen.h>
+
 typedef uint16_t DGColor;
 
 #define ROTATION_NORMAL 0
@@ -75,11 +77,13 @@ class DGScreen {
     void setColor(DGColor fg, DGColor bg);
     void setBg(DGColor bg);
     void setFg(DGColor fg);
+    void touchScreen();
     boolean processTouch(int16_t x, int16_t y);
     void addButton(int16_t x0, int16_t y0, int16_t w, int16_t h, const char *txt, DGColor color, DGColor textColor, DGScreenCallback callback, boolean isHollow);
 
   private:
     Elegoo_TFTLCD *tft;
+    TouchScreen *ts;
     uint8_t verticalSeparation;
     uint8_t horizontalSeparation;
     uint8_t charSize;
