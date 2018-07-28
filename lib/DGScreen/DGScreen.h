@@ -12,6 +12,11 @@
 
 typedef uint16_t DGColor;
 
+#define ROTATION_NORMAL 0
+#define ROTATION_SIDEWAYS_RIGHT 1
+#define ROTATION_UPSIDE_DOWN 2
+#define ROTATION_SIDEWAYS_LEFT 3
+
 // Assign human-readable names to some common 16-bit color values:
 #define BLACK   0x0000
 #define BLUE    0x001F
@@ -80,7 +85,7 @@ class DGScreen {
     uint8_t charSize;
     uint16_t nextCharX, nextCharY;
     DGScreenPage *firstPage, *currentPage;
-    uint8_t rotation = 0;
+    uint8_t rotation = ROTATION_NORMAL;
 };
 
 #endif

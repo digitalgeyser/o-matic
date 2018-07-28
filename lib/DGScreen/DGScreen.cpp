@@ -105,8 +105,21 @@ void DGScreen::drawChar(int16_t x, int16_t y, unsigned char c) {
 
 boolean DGScreen::processTouch(int16_t x, int16_t y) {
   switch(rotation) {
-    case 0: x = width() - x; y = height() - y; break;
-    case 2: break;
+    case ROTATION_UPSIDE_DOWN:
+      // For some reason this is normal for the touch.
+      break;
+    case ROTATION_NORMAL:
+      x = width() - x;
+      y = height() - y;
+      break;
+    case ROTATION_SIDEWAYS_LEFT:
+      x = height() - y;
+      y = x;
+      break;
+    case ROTATION_SIDEWAYS_RIGHT:
+      x = y;
+      y = width() - x;
+      break;
   }
   DGScreenArea *finger = currentPage->area();
   while(finger != NULL ) {

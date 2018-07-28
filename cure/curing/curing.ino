@@ -108,7 +108,7 @@ void setup(void) {
   Serial.begin(9600);
   Serial.println(F("Paint!"));
 
-  s.setup(GREEN, BLACK, 0);
+  s.setup(GREEN, BLACK, ROTATION_NORMAL);
 
   Serial.println(F("Screen setup, filling it BLACK."));
   s.clearScreen();
@@ -166,7 +166,7 @@ void realTimeTick() {
   static int lastSec = -1;
   static int lastMin = -1;
   RTCDateTime dt = clock.getDateTime();
-  
+
   if ( dt.minute != lastMin ) {
     minuteTick(dt.minute);
     lastMin = dt.minute;
@@ -182,7 +182,7 @@ void realTimeTick() {
 }
 
 void minuteTick(int minute) {
-  
+
 }
 
 void secondTick(int second) {
@@ -218,7 +218,7 @@ void readTouchScreen() {
     } else {
       Serial.println("Empty touch!");
     }
-  }  
+  }
 }
 
 /*************************************************** Functions ****************************/
@@ -440,7 +440,7 @@ void sensorTick() {
     while(retries>0) {
       float t = dhtToUse->readTemperature();
       float h = dhtToUse->readHumidity();
-        
+
       if ( isnan(t) || isnan(h) ) {
         retries--;
         success = false;
