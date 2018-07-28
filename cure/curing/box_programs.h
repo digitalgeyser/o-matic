@@ -77,7 +77,22 @@ const BoxProgramPhase BresaolaCuringPhases[] = {
 const BoxProgramPhase DuckProsciuttoCuringPhases[] = {
   { 55, 55, 85, 85, 168, 50 },
 };
-
+const BoxProgramPhase BloomyRindCheeseAgingPhases[] = {
+  { 48, 48, 96, 96, 0xff, 50 },
+};
+const BoxProgramPhase BlueCheeseAgingPhases[] = {
+  { 52, 52, 90, 90, 1440, 50 },
+  { 43, 43, 90, 90, 0xff, 50 },
+};
+const BoxProgramPhase FetaCheeseAgingPhases[] = {
+  { 57, 57,0xff , 0xff, 0xff, 50 },
+};
+const BoxProgramPhase CaerphillyCheeseAgingPhases[] = {
+  { 52, 52,92 , 92, 0xff, 50 },
+};
+const BoxProgramPhase CheddarCheeseAgingPhases[] = {
+  { 52, 52, 0xff, 0xff, 0xff, 50 },
+};
 
 // Once you have all the program phases above,
 // create the "BoxProgram" block that contains
@@ -154,5 +169,35 @@ const BoxProgram defaultPrograms[] = {
     "This program is used to cure duck prosciutto.",
     sizeof(DuckProsciuttoCuringPhases)/sizeof(BoxProgramPhase),
     DuckProsciuttoCuringPhases
+  },
+  {
+    "Bloomy Rind Cheese Aging",
+    "This program is used to age bloomy rind cheeses, such as Camembert, Truffle, Brie and Valencay.",
+    sizeof(BloomyRindCheeseAgingPhases)/sizeof(BoxProgramPhase),
+    BloomyRindCheeseAgingPhases
+  },
+  {
+    "Blue Cheese Aging",
+    "This program is used to age blue cheeses, such as Bisbee, Stilton and Blue Capricorn.",
+    sizeof(BlueCheeseAgingPhases)/sizeof(BoxProgramPhase),
+    BlueCheeseAgingPhases
+  },
+  {
+    "Feta Cheese Aging",
+    "This program is used to age Feta cheese.",
+    sizeof(FetaCheeseAgingPhases)/sizeof(BoxProgramPhase),
+    FetaCheeseAgingPhases
+  },
+  {
+    "Caerphilly Cheese Aging",
+    "This program is used to age Caerphilly and bandaged Cheddar cheese.",
+    sizeof(CaerphillyCheeseAgingPhases)/sizeof(BoxProgramPhase),
+    CaerphillyCheeseAgingPhases
+  },
+  {
+    "Cheddar Cheese Aging",
+    "This program is used to age Cheddar cheese (stirred curd and vacuum sealed).",
+    sizeof(CheddarCheeseAgingPhases)/sizeof(BoxProgramPhase),
+    CheddarCheeseAgingPhases
   },
 };
