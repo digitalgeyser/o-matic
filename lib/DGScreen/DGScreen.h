@@ -31,20 +31,20 @@ typedef uint16_t DGColor;
 
 typedef void (*DGScreenCallback)();
 
-typedef struct _DGScreenArea {
+typedef struct _DGScreenButton {
   uint16_t x0;
   uint16_t y0;
   uint16_t x1;
   uint16_t y1;
   DGScreenCallback callback;
-  struct _DGScreenArea *nextArea;
-} DGScreenArea;
+  struct _DGScreenButton *nextButton;
+} DGScreenButton;
 
 class DGScreenPage {
   public:
     DGScreenPage(const char *title, DGColor fg, DGColor bg);
-    DGScreenArea *area();
-    void addArea(DGScreenArea *area);
+    DGScreenButton *firstButton();
+    void addButton(DGScreenButton *button);
     void setBg(DGColor bg);
     void setFg(DGColor fg);
     DGColor fg();
@@ -53,7 +53,7 @@ class DGScreenPage {
     const char *title;
     DGColor bgColor, fgColor;
     DGScreenPage *nextPage;
-    DGScreenArea *firstArea;
+    DGScreenButton *buttonFirst;
 };
 
 class DGScreen {

@@ -162,7 +162,7 @@ boolean DGScreen::processTouch(int16_t x, int16_t y) {
       x = map(tmp, TS_MINY, TS_MAXY, 0, width());
       break;
   }
-  DGScreenArea *finger = currentPage->area();
+  DGScreenButton *finger = currentPage->firstButton();
   while(finger != NULL ) {
     if ( x >= finger->x0 && x <= finger->x1 && y >= finger->y0 && y <= finger->y1 ) {
       if ( finger->callback != NULL ) {
@@ -170,7 +170,7 @@ boolean DGScreen::processTouch(int16_t x, int16_t y) {
         return true;
       }
     }
-    finger = finger->nextArea;
+    finger = finger->nextButton;
   }
   return false;
 }
@@ -184,13 +184,13 @@ void DGScreen::addButton(int16_t x0,
                          DGColor textColor,
                          DGScreenCallback callback,
                          boolean isHollow) {
-  DGScreenArea *a = new DGScreenArea;
+  DGScreenButton *a = new DGScreenButton;
   a->x0 = x0;
   a->y0 = y0;
   a->x1 = x0+w;
   a->y1 = y0+h;
   a->callback = callback;
-  currentPage->addArea(a);
+  currentPage->addButton(a);
   this->fillRoundRect(x0, y0, w, h, w/5, color);
   if ( isHollow ) {
     this->fillRoundRect(x0+5, y0+5, w-10, h-10, w/5, BLACK);

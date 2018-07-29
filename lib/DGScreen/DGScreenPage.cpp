@@ -11,16 +11,16 @@ DGScreenPage::DGScreenPage(const char *title, DGColor fg, DGColor bg) {
   this->fgColor = fg;
   this->bgColor = bg;
   this->nextPage = NULL;
-  this->firstArea = NULL;
+  this->buttonFirst = NULL;
 }
 
-DGScreenArea *DGScreenPage::area() {
-  return this->firstArea;
+DGScreenButton *DGScreenPage::firstButton() {
+  return this->buttonFirst;
 }
 
-void DGScreenPage::addArea(DGScreenArea *area) {
-  area->nextArea = this->firstArea;
-  this->firstArea = area;
+void DGScreenPage::addButton(DGScreenButton *button) {
+  button->nextButton = this->buttonFirst;
+  this->buttonFirst = button;
 }
 
 DGColor DGScreenPage::fg() { return this->fgColor; }
