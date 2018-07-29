@@ -11,6 +11,15 @@
 #define YM 9   // can be a digital pin
 #define XP 8   // can be a digital pin
 
+//Touch For New ILI9341 TP
+#define TS_MINX 120
+#define TS_MAXX 900
+
+#define TS_MINY 70
+#define TS_MAXY 920
+
+#define TS_CONTROL_PIN 13
+
 #define MINPRESSURE 10
 #define MAXPRESSURE 1000
 
@@ -117,9 +126,9 @@ void DGScreen::drawChar(int16_t x, int16_t y, unsigned char c) {
 }
 
 void DGScreen::touchScreen() {
-  digitalWrite(13, HIGH);
+  digitalWrite(TS_CONTROL_PIN, HIGH);
   TSPoint p = ts->getPoint();
-  digitalWrite(13, LOW);
+  digitalWrite(TS_CONTROL_PIN, LOW);
 
   pinMode(XM, OUTPUT);
   pinMode(YP, OUTPUT);
@@ -130,13 +139,6 @@ void DGScreen::touchScreen() {
     processTouch(p.x, p.y);
   }
 }
-
-//Touch For New ILI9341 TP
-#define TS_MINX 120
-#define TS_MAXX 900
-
-#define TS_MINY 70
-#define TS_MAXY 920
 
 boolean DGScreen::processTouch(int16_t x, int16_t y) {
   switch(rotation) {
@@ -173,7 +175,15 @@ boolean DGScreen::processTouch(int16_t x, int16_t y) {
   return false;
 }
 
-void DGScreen::addButton(int16_t x0, int16_t y0, int16_t w, int16_t h, const char *txt, DGColor color, DGColor textColor, DGScreenCallback callback, boolean isHollow) {
+void DGScreen::addButton(int16_t x0,
+                         int16_t y0,
+                         int16_t w,
+                         int16_t h,
+                         const char *txt,
+                         DGColor color,
+                         DGColor textColor,
+                         DGScreenCallback callback,
+                         boolean isHollow) {
   DGScreenArea *a = new DGScreenArea;
   a->x0 = x0;
   a->y0 = y0;

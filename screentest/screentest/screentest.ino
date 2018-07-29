@@ -11,9 +11,12 @@ DGScreen s(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
 int c = 0;
 
 void setup() {
-  s.setup(GREEN, BLACK, ROTATION_SIDEWAYS_LEFT);
+  Serial.begin(9600);
+  s.setup(GREEN, BLACK, ROTATION_SIDEWAYS_RIGHT);
   s.clearScreen();
-  s.addButton(0, 0, 80, 80, "Cnt", BLUE, BLACK, button, true);
+  s.addButton(0, 0, 80, 80, "But1", BLUE, BLUE, button, true);
+  s.addButton(80, 0, 80, 80, "But2", RED, RED, button, true);
+  s.addButton(0, 80, 80, 80, "But2", YELLOW, YELLOW, button, true);
 }
 
 void button() {
