@@ -30,10 +30,7 @@ void button() {
 }
 
 void loop() {
-    readTouchScreen();
-}
-
-void readTouchScreen() {
   s.touchScreen();
 }
+
 

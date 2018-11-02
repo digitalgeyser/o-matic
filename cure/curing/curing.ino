@@ -25,10 +25,11 @@
 #define LCD_RD A0
 #define LCD_RESET A4
 
-#define POLARITY_RELAY_1 31
-#define POLARITY_RELAY_2 33
+#define PELTIER_ENABLE 37
+#define PELTIER_CONTROL1 35
+#define PELTIER_CONTROL2 33
 
-#define TEMPERATURE_HUMIDITY_SENSOR_IN_PIN 35
+#define TEMPERATURE_HUMIDITY_SENSOR_IN_PIN 23
 #define TEMPERATURE_HUMIDITY_SENSOR_OUT_PIN 45
 
 #define HUMID_PUMP_TRANSISTOR_PIN 44
@@ -108,8 +109,9 @@ void setup(void) {
   s.addButton(s.width() - BUT_W, ROW3 + BUT_H + 5, BUT_W, BUT_H, "Humid", GREEN,  GREEN,  humidityPlus,  true);
 
   pinMode(13, OUTPUT);
-  pinMode(POLARITY_RELAY_1, OUTPUT);
-  pinMode(POLARITY_RELAY_2, OUTPUT);
+  pinMode(PELTIER_CONTROL1, OUTPUT);
+  pinMode(PELTIER_CONTROL2, OUTPUT);
+  pinMode(PELTIER_ENABLE, OUTPUT);
   pinMode(DIFFUSER_RELAY, OUTPUT);
   pinMode(UNUSED_RELAY, OUTPUT);
   pinMode(HUMID_PUMP_TRANSISTOR_PIN, OUTPUT);
@@ -250,18 +252,21 @@ void setCoolingState(int state) {
   if ( state == coolingState ) return;
   switch(state) {
     case OFF:
-      digitalWrite(POLARITY_RELAY_1, HIGH);
-      digitalWrite(POLARITY_RELAY_2, HIGH);
+      digitalWrite(PELTIER_ENABLE, LOW);
       Serial.println(F("Off"));
       break;
     case COOLING:
-      digitalWrite(POLARITY_RELAY_1, HIGH);
-      digitalWrite(POLARITY_RELAY_2, LOW);
+      digitalWrite(PELTIER_ENABLE, LOW);
+      digitalWrite(PELTIER_CONTROL1, HIGH);
+      digitalWrite(PELTIER_CONTROL2, LOW);
+      digitalWrite(PELTIER_ENABLE, HIGH);
       Serial.println(F("Cool"));
       break;
     case HEATING:
-      digitalWrite(POLARITY_RELAY_1, LOW);
-      digitalWrite(POLARITY_RELAY_2, HIGH);
+      digitalWrite(PELTIER_ENABLE, LOW);
+      digitalWrite(PELTIER_CONTROL1, LOW);
+      digitalWrite(PELTIER_CONTROL2, HIGH);
+      digitalWrite(PELTIER_ENABLE, HIGH);
       Serial.println(F("Heat"));
       break;
   }
@@ -389,9 +394,14 @@ void sensorTick() {
   // DHT11 read
   for ( int i=0; i<2; i++ ) {
     int which = ( i == 0 ? IN : OUT);
+    
     bool success = false;
     int retries = 3;
     DHT *dhtToUse = (which == IN ? &insideSensor : &outsideSensor );
+    
+    // Temporary: we don't have out sensor yet
+    if ( which == OUT ) continue;
+    
     while(retries>0) {
       float t = dhtToUse->readTemperature();
       float h = dhtToUse->readHumidity();
