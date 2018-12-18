@@ -30,10 +30,15 @@
 #define PELTIER_CONTROL2 33
 
 #define TEMPERATURE_HUMIDITY_SENSOR_IN_PIN 23
+#define IN_SENSOR_TYPE DHT11
+
 #define TEMPERATURE_HUMIDITY_SENSOR_OUT_PIN 45
+#define OUT_SENSOR_TYPE DHT11
 
 #define HUMID_PUMP_TRANSISTOR_PIN 44
 #define DRY_PUMP_TRANSISTOR_PIN 42
+
+#define FAN_PWM 27
 
 #define DIFFUSER_RELAY 26
 #define UNUSED_RELAY 24
@@ -61,8 +66,8 @@
 /********************************  STATE *******************************/
 
 DGScreen s(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
-DHT insideSensor(TEMPERATURE_HUMIDITY_SENSOR_IN_PIN, DHT22);
-DHT outsideSensor(TEMPERATURE_HUMIDITY_SENSOR_OUT_PIN, DHT11);
+DHT insideSensor(TEMPERATURE_HUMIDITY_SENSOR_IN_PIN, IN_SENSOR_TYPE);
+DHT outsideSensor(TEMPERATURE_HUMIDITY_SENSOR_OUT_PIN, OUT_SENSOR_TYPE);
 
 // State of stuff: -1 is initial state.
 int coolingState = -1; // OFF, COOLING, HEATING
@@ -116,6 +121,7 @@ void setup(void) {
   pinMode(UNUSED_RELAY, OUTPUT);
   pinMode(HUMID_PUMP_TRANSISTOR_PIN, OUTPUT);
   pinMode(DRY_PUMP_TRANSISTOR_PIN, OUTPUT);
+  pinMode(FAN_PWM, OUTPUT);
   setMode(MODE_MANUAL);
   setCoolingState(OFF);
   setPump(OFF);
