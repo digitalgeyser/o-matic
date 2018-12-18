@@ -25,9 +25,8 @@
 #define LCD_RD A0
 #define LCD_RESET A4
 
-#define PELTIER_ENABLE 37
-#define PELTIER_CONTROL1 35
-#define PELTIER_CONTROL2 33
+#define PELTIER_RELAY1 35
+#define PELTIER_RELAY2 33
 
 #define TEMPERATURE_HUMIDITY_SENSOR_IN_PIN 23
 #define IN_SENSOR_TYPE DHT11
@@ -114,9 +113,8 @@ void setup(void) {
   s.addButton(s.width() - BUT_W, ROW3 + BUT_H + 5, BUT_W, BUT_H, "Humid", GREEN,  GREEN,  humidityPlus,  true);
 
   pinMode(13, OUTPUT);
-  pinMode(PELTIER_CONTROL1, OUTPUT);
-  pinMode(PELTIER_CONTROL2, OUTPUT);
-  pinMode(PELTIER_ENABLE, OUTPUT);
+  pinMode(PELTIER_RELAY1, OUTPUT);
+  pinMode(PELTIER_RELAY2, OUTPUT);
   pinMode(DIFFUSER_RELAY, OUTPUT);
   pinMode(UNUSED_RELAY, OUTPUT);
   pinMode(HUMID_PUMP_TRANSISTOR_PIN, OUTPUT);
@@ -258,21 +256,20 @@ void setCoolingState(int state) {
   if ( state == coolingState ) return;
   switch(state) {
     case OFF:
-      digitalWrite(PELTIER_ENABLE, LOW);
+      digitalWrite(PELTIER_RELAY1, LOW);
+      digitalWrite(PELTIER_RELAY2, LOW);
       Serial.println(F("Off"));
       break;
     case COOLING:
-      digitalWrite(PELTIER_ENABLE, LOW);
-      digitalWrite(PELTIER_CONTROL1, HIGH);
-      digitalWrite(PELTIER_CONTROL2, LOW);
-      digitalWrite(PELTIER_ENABLE, HIGH);
+      digitalWrite(PELTIER_RELAY1, LOW);
+      digitalWrite(PELTIER_RELAY2, LOW);
+      digitalWrite(PELTIER_RELAY2, HIGH);
       Serial.println(F("Cool"));
       break;
     case HEATING:
-      digitalWrite(PELTIER_ENABLE, LOW);
-      digitalWrite(PELTIER_CONTROL1, LOW);
-      digitalWrite(PELTIER_CONTROL2, HIGH);
-      digitalWrite(PELTIER_ENABLE, HIGH);
+      digitalWrite(PELTIER_RELAY1, LOW);
+      digitalWrite(PELTIER_RELAY2, LOW);
+      digitalWrite(PELTIER_RELAY1, HIGH);
       Serial.println(F("Heat"));
       break;
   }

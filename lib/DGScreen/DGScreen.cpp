@@ -38,6 +38,11 @@ DGScreen::DGScreen(uint8_t cs, uint8_t cd, uint8_t wr, uint8_t rd, uint8_t reset
    currentPage = firstPage = new DGScreenPage("Home", WHITE, BLACK);
 }
 
+DGScreenPage *createPage() {
+  DGScreenPage *page = new DGScreenPage("Home", WHITE, BLACK);
+  return page;
+}
+
 void DGScreen::setColor(DGColor fg, DGColor bg) {
   currentPage->setFg(fg);
   currentPage->setBg(bg);

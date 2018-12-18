@@ -59,6 +59,7 @@ class DGScreenPage {
 class DGScreen {
   public:
     DGScreen(uint8_t cs, uint8_t cd, uint8_t wr, uint8_t rd, uint8_t reset);
+    DGScreenPage *createPage();
     int16_t width();
     int16_t height();
     void setup(DGColor fg, DGColor bg, uint8_t rotation);
