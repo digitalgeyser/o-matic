@@ -256,20 +256,20 @@ void setCoolingState(int state) {
   if ( state == coolingState ) return;
   switch(state) {
     case OFF:
-      digitalWrite(PELTIER_RELAY1, LOW);
-      digitalWrite(PELTIER_RELAY2, LOW);
+      digitalWrite(PELTIER_RELAY1, HIGH);
+      digitalWrite(PELTIER_RELAY2, HIGH);
       Serial.println(F("Off"));
       break;
     case COOLING:
-      digitalWrite(PELTIER_RELAY1, LOW);
-      digitalWrite(PELTIER_RELAY2, LOW);
+      digitalWrite(PELTIER_RELAY1, HIGH);
       digitalWrite(PELTIER_RELAY2, HIGH);
+      digitalWrite(PELTIER_RELAY2, LOW);
       Serial.println(F("Cool"));
       break;
     case HEATING:
-      digitalWrite(PELTIER_RELAY1, LOW);
-      digitalWrite(PELTIER_RELAY2, LOW);
       digitalWrite(PELTIER_RELAY1, HIGH);
+      digitalWrite(PELTIER_RELAY2, HIGH);
+      digitalWrite(PELTIER_RELAY1, LOW);
       Serial.println(F("Heat"));
       break;
   }
