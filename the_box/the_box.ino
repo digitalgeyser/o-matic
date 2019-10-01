@@ -25,7 +25,7 @@ void setup() {
             "     The Box!       ",
             "   Digital Geyser   ",
             "                    ",
-            "  Yummy sausages!   ");
+            "Yummy sausages here!");
 }
 
 void loop() {
