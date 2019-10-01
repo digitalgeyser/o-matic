@@ -38,7 +38,7 @@ void setup() {
             "     The Box!       ",
             "   Digital Geyser   ",
             "                    ",
-            "  Yummy sausages!   ");
+            "Yummy sausages here!");
   delay(3000);
 }
 
