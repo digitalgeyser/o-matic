@@ -32,6 +32,8 @@ void updateLcd(LiquidCrystal_I2C lcd,
 }
 
 void setup() {
+  Serial.begin(9600);
+  Serial.println(F("Paint!"));
   lcd.init();  //initialize the lcd
   lcd.backlight();  //open the backlight 
   updateLcd(lcd,
@@ -43,11 +45,14 @@ void setup() {
 }
 
 void loop() {
+  Serial.println(F("Loop."));
   RTCDateTime dt = clock.getDateTime();
+  Serial.println(F("Got clock."));
   updateLcd(lcd,
             "     The Box!       ",
             "   Digital Geyser   ",
             "                    ",
             clock.dateFormat("m/d/Y H:i", dt));
+  Serial.println(F("Updated LCD."));
   delay(1000);
 }
