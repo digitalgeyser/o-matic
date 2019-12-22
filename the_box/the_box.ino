@@ -27,6 +27,8 @@ Button button_dec(25);
 Button button_sel(26);
 
 Button buttons[5] = { button_next, button_before, button_inc, button_dec, button_sel };
+int buttonX[5] = { 19, 17, 18, 18, 18 };
+int buttonY[5] = {  1,  1,  0,  2,  1 };
 
 RTC_DS3231 clock;
 //DHT insideSensor(TEMPERATURE_HUMIDITY_SENSOR_IN_PIN, IN_SENSOR_TYPE);
@@ -79,14 +81,22 @@ void lcdTick() {
   lcd.print(now.toString(buf2));
 }
 
+void checkButtons() {
+  for ( int i = 0; i<BUTTON_COUNT; i++ ) {
+    if ( buttons[i].toggled() ) {
+      lcd.setCursor(buttonX[i], buttonY[i]);
+      if ( buttons[i].read() == Button::PRESSED ) {
+        lcd.print("O");
+      } else {
+        lcd.print(" ");
+      }     
+    }
+  }
+}
+
 void loop() {
   unsigned long currentTime = millis();
-
-  if ( button_next.pressed() ) Serial.println("next");
-  if ( button_before.pressed() ) Serial.println("before");
-  if ( button_inc.pressed() ) Serial.println("inc");
-  if ( button_dec.pressed() ) Serial.println("dec");
-  if ( button_sel.pressed() ) Serial.println("sel");
+  checkButtons();
 
   if ( currentTime - lastLcdRefresh > 1000 ) {
     lcdTick();
