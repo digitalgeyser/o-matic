@@ -1,4 +1,11 @@
-#include <DS3231.h>
+// Libraries used:
+//
+//  Adafruit unified sensor - by Adafruit
+//  DHT Sensor Library - by Adafruit
+//  RTClib - by Adafruit
+//  LiquidCrystal_I2C - by Frank de Brabander
+
+#include <RTClib.h>
 #include <LiquidCrystal_I2C.h>
 #include <DHT.h>
 
@@ -10,7 +17,7 @@ LiquidCrystal_I2C lcd(0x27,20,4);  // set the LCD address to 0x27 for a 16 chars
 #define IN_SENSOR_TYPE DHT11
 #define OUT_SENSOR_TYPE DHT11
 
-DS3231 clock;
+RTC_DS3231 clock;
 DHT insideSensor(TEMPERATURE_HUMIDITY_SENSOR_IN_PIN, IN_SENSOR_TYPE);
 DHT outsideSensor(TEMPERATURE_HUMIDITY_SENSOR_OUT_PIN, OUT_SENSOR_TYPE);
 
@@ -28,7 +35,6 @@ void updateLcd(LiquidCrystal_I2C lcd,
   lcd.setCursor ( 0, 3 );
   lcd.print(line3);
 
-  clock.begin();
 }
 
 void setup() {
@@ -42,17 +48,22 @@ void setup() {
             "                    ",
             "Yummy sausages here!");
   delay(3000);
+
+  clock.begin();
 }
 
 void loop() {
   Serial.println(F("Loop."));
-  RTCDateTime dt = clock.getDateTime();
+  DateTime now = clock.now();
   Serial.println(F("Got clock."));
-  updateLcd(lcd,
+  Serial.println(now.second(), DEC);
+char buf2[] = "YYMMDD-hh:mm:ss";
+   Serial.println(now.toString(buf2));
+    updateLcd(lcd,
             "     The Box!       ",
             "   Digital Geyser   ",
             "                    ",
-            clock.dateFormat("m/d/Y H:i", dt));
+            now.toString(buf2));
   Serial.println(F("Updated LCD."));
   delay(1000);
 }
