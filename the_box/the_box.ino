@@ -57,7 +57,7 @@ void loop() {
   DateTime now = clock.now();
   Serial.println(F("Got clock."));
   Serial.println(now.second(), DEC);
-char buf2[] = "YYMMDD-hh:mm:ss";
+char buf2[] = "MM/DD/YYYY  hh:mm:ss";
    Serial.println(now.toString(buf2));
     updateLcd(lcd,
             "     The Box!       ",
