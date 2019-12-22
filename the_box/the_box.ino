@@ -74,11 +74,8 @@ void setup() {
 void lcdTick() {
   DateTime now = clock.now();
   char buf2[] = "MM/DD/YYYY  hh:mm:ss";
-  updateLcd(lcd,
-            "     The Box!       ",
-            "   Digital Geyser   ",
-            "                    ",
-            now.toString(buf2));
+  lcd.setCursor ( 0, 3 );
+  lcd.print(now.toString(buf2));
 }
 
 void loop() {
