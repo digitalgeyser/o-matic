@@ -4,6 +4,7 @@
 //  DHT Sensor Library - by Adafruit
 //  RTClib - by Adafruit
 //  LiquidCrystal_I2C - by Frank de Brabander
+//  Button - by Michael Adams
 
 #include <RTClib.h>
 #include <LiquidCrystal_I2C.h>
