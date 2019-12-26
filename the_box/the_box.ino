@@ -20,11 +20,11 @@ LiquidCrystal_I2C lcd(0x27,20,4);  // set the LCD address to 0x27 for a 16 chars
 #define OUT_SENSOR_TYPE DHT11
 
 #define BUTTON_COUNT 5
-Button button_next(22);
-Button button_before(23);
+Button button_next(26);
+Button button_sel(22);
 Button button_inc(24);
-Button button_dec(25);
-Button button_sel(26);
+Button button_before(25);
+Button button_dec(23);
 
 Button buttons[5] = { button_next, button_before, button_inc, button_dec, button_sel };
 int buttonX[5] = { 19, 17, 18, 18, 18 };
@@ -67,6 +67,10 @@ void setup() {
   delay(3000);
 
   clock.begin();
+  
+  // This line will set the time to whatever the time was when the sketch was compiled.
+  // Take this out later.
+  clock.adjust(DateTime(F(__DATE__), F(__TIME__)));
 
   for ( i = 0; i<BUTTON_COUNT; i++ ) {
     buttons[i].begin();
