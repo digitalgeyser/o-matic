@@ -1,0 +1,10 @@
+ESP8266 versions:
+=================
+
+(AT+GMR)
+
+AT version:1.1.0.0(May 11 2016 18:09:56)
+SDK version:1.5.4(baaeaebb)
+compile time:May 20 2016 15:08:19
+OK
+
