@@ -11,8 +11,6 @@
 #include <LiquidCrystal_I2C.h>
 #include <DHT.h>
 #include <Button.h>
-#include <WiFiEsp.h>
-#include <SoftwareSerial.h>
 
 LiquidCrystal_I2C lcd(0x27,20,4);  // set the LCD address to 0x27 for a 16 chars and 2 line display
 
@@ -37,9 +35,6 @@ RTC_DS3231 clock;
 
 DHT outsideSensor(TEMPERATURE_HUMIDITY_SENSOR_OUT_PIN, OUT_SENSOR_TYPE);
 DHT insideSensor(TEMPERATURE_HUMIDITY_SENSOR_IN_PIN, IN_SENSOR_TYPE);
-
-SoftwareSerial SerialWifi(19,18);
-WiFiEspClient client;
 
 unsigned long lastClockTick = 0;
 
@@ -91,16 +86,14 @@ void setup() {
   Serial.println(F("Sensor init."));
 
   // Wifi
-  SerialWifi.begin(115200);
-  WiFi.init(&SerialWifi);
+  Serial1.begin(115200); // 9600, 57600, 115200
+  Serial.println(F("SerialWifi init."));
 
-  // check for the presence of the shield
-  if (WiFi.status() == WL_NO_SHIELD) {
-    Serial.println("WiFi shield not present");
+  if ( SendCommand("AT+GMR", "OK") ) {
+    Serial.println(F("SerialWifi initialized."));
   } else {
-    Serial.println("WiFi initialized.");
+    Serial.println(F("SerialWifi not initialized."));
   }
-
 }
 
 
@@ -156,4 +149,28 @@ void loop() {
 
   sensorTick(currentTime);
   clockTick(currentTime);
+}
+
+boolean SendCommand(String cmd, String ack){
+  Serial.println(cmd);
+  Serial1.println(cmd); // Send "AT+" command to module
+  return echoFind(ack);
+}
+ 
+boolean echoFind(String keyword){
+  byte current_char = 0;
+  byte keyword_length = keyword.length();
+  long deadline = millis() + 3000;
+  while(millis() < deadline) {
+    if (Serial1.available()){
+      char ch = Serial1.read();
+      Serial.print(ch);
+      if (ch == keyword[current_char])
+        if (++current_char == keyword_length){
+        Serial.println();
+        return true;
+      }
+    }
+  }
+ return false; // Timed out
 }
