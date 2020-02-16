@@ -52,7 +52,6 @@ unsigned long lastClockTick = 0;
 #define PWM_FAN_0_PIN 10
 #define PWM_FAN_1_PIN 9
 
-
 /**
  * Performs a fan operation.
  * Opt can be one of the operations above.
@@ -115,15 +114,9 @@ void fan(byte opt, int arg)
 }
 
 /******************* LCD OPERATIONS *********************/
-#define LCD_INIT 0
-/***************** UTILITY FUNCTION **********************/
-
 LiquidCrystal_I2C lcd(0x27, 20, 4); // set the LCD address to 0x27 for a 16 chars and 2 line display
 
-void lcdUpdate(const char *line0,
-               const char *line1,
-               const char *line2,
-               const char *line3)
+void lcdUpdate(const char *line0, const char *line1, const char *line2, const char *line3)
 {
   lcd.setCursor(0, 0);
   lcd.print(line0);
@@ -135,29 +128,27 @@ void lcdUpdate(const char *line0,
   lcd.print(line3);
 }
 
-void lcdPrintFloatAt(byte x, byte y, float f) {
-  lcd.setCursor(x,y);
+void lcdPrintFloatAt(byte x, byte y, float f)
+{
+  lcd.setCursor(x, y);
   lcd.print(f);
 }
 
-void lcdPrintStringAt(byte x, byte y, const char *s) {
-  lcd.setCursor(x,y);
+void lcdPrintStringAt(byte x, byte y, const char *s)
+{
+  lcd.setCursor(x, y);
   lcd.print(s);
 }
 
-void lcdOp(byte opt)
+void lcdInit()
 {
 
-  switch(opt) {
-    case LCD_INIT:
-      lcd.init();
-      lcd.backlight();
-      lcdUpdate("Out:      %      C  ",
-                " In:      %      C  ",
-                "                    ",
-                "   Digital Geyser   ");
-      break;
-  }
+  lcd.init();
+  lcd.backlight();
+  lcdUpdate("Out:      %      C  ",
+            " In:      %      C  ",
+            "                    ",
+            "   Digital Geyser   ");
 }
 
 /******************* SETUP CODE ************************/
@@ -169,7 +160,7 @@ void setup()
   Serial.begin(115200);
   Serial.println(F("Serial init."));
 
-  lcdOp(LCD_INIT);
+  lcdInit();
 
   clock.begin();
 
