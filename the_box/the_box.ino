@@ -100,14 +100,6 @@ void peltier(byte opt) {
 
 volatile int fan0PulseCounter, fan1PulseCounter;
 
-void fan0Tach() {
-  fan0PulseCounter++;
-}
-
-void fan1Tach() {
-  fan1PulseCounter++;
-}
-
 /**
  * Performs a fan operation.
  * Opt can be one of the operations above.
@@ -123,8 +115,6 @@ void fan(byte opt, int arg)
   case FAN_INIT:
     pinMode(PWM_FAN_0_PIN, OUTPUT);
     pinMode(PWM_FAN_1_PIN, OUTPUT);
-    attachInterrupt(digitalPinToInterrupt(FAN_0_TACH_PIN), fan0Tach, RISING);
-    attachInterrupt(digitalPinToInterrupt(FAN_1_TACH_PIN), fan1Tach, RISING);
     ch |= (0x01 | 0x02);
     break;
   case FAN_0_SET:
@@ -171,13 +161,23 @@ void fan(byte opt, int arg)
     analogWrite(PWM_FAN_1_PIN, fanSpeed[1]);
 }
 
+// ISRs
+void fan0Tach() { fan0PulseCounter++; }
+void fan1Tach() { fan1PulseCounter++; }
+
+// Fan tick is mostly just using the fan tach interrupts to measure the speed of the fan.
+// It runs every 2 seconds and consumes 200 ms to measure the fans.
 void fanTick(unsigned long currentTime)
 {
   static unsigned long lastFanTick = 0;
 
-  if ( (currentTime - lastFanTick) > 1000) {
+  if ( (currentTime - lastFanTick) > 2000) {
     fan0PulseCounter = fan1PulseCounter = 0;
+    attachInterrupt(digitalPinToInterrupt(FAN_0_TACH_PIN), fan0Tach, RISING);
+    attachInterrupt(digitalPinToInterrupt(FAN_1_TACH_PIN), fan1Tach, RISING);
     delay(100);
+    detachInterrupt(digitalPinToInterrupt(FAN_0_TACH_PIN));
+    detachInterrupt(digitalPinToInterrupt(FAN_1_TACH_PIN));
     lcdPrintIntAt(5, 2, fan0PulseCounter); // At full speed, this is mostly 5, sometimes 4.
     lcdPrintIntAt(12, 2, fan1PulseCounter); // When fan is not spinning, this is 0.
     lastFanTick = currentTime;
