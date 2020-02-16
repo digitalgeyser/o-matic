@@ -11,16 +11,12 @@
 #include <DHT.h>
 #include <Button.h>
 
-LiquidCrystal_I2C lcd(0x27, 20, 4); // set the LCD address to 0x27 for a 16 chars and 2 line display
-
 #define TEMPERATURE_HUMIDITY_SENSOR_OUT_PIN 30
 #define TEMPERATURE_HUMIDITY_SENSOR_IN_PIN 31
 
 #define IN_SENSOR_TYPE DHT22
 #define OUT_SENSOR_TYPE DHT22
 
-#define PWM_FAN_1_PIN 10
-#define PWM_FAN_2_PIN 9
 int fan1Speed = 100; // 0 - 255
 int fan2Speed = 100; // 0 - 255
 
@@ -48,7 +44,86 @@ DHT insideSensor(TEMPERATURE_HUMIDITY_SENSOR_IN_PIN, IN_SENSOR_TYPE);
 
 unsigned long lastClockTick = 0;
 
-void updateLcd(LiquidCrystal_I2C lcd,
+/********************** FAN OPERATIONS ******************/
+#define FAN_INIT 0
+#define FAN_0_SET 1
+#define FAN_1_SET 2
+#define FAN_0_CHANGE 3
+#define FAN_1_CHANGE 4
+#define FAN_TOGGLE_MIN_MAX 5
+
+#define PWM_FAN_0_PIN 10
+#define PWM_FAN_1_PIN 9
+
+
+/**
+ * Performs a fan operation.
+ * Opt can be one of the operations above.
+ * Arg is a number 0-255.
+ */
+void fan(byte opt, int arg)
+{
+  static int fanSpeed[] = {100, 100};
+  int ch = 0; // bitmask tracking which fans changed
+
+  switch (opt)
+  {
+  case FAN_INIT:
+    pinMode(PWM_FAN_0_PIN, OUTPUT);
+    pinMode(PWM_FAN_1_PIN, OUTPUT);
+    ch |= (0x01 | 0x02);
+    break;
+  case FAN_0_SET:
+    fanSpeed[0] = arg;
+    ch |= 0x01;
+    break;
+  case FAN_1_SET:
+    fanSpeed[1] = arg;
+    ch |= 0x02;
+    break;
+  case FAN_0_CHANGE:
+    fanSpeed[0] += arg;
+    ch |= 0x01;
+    if (fanSpeed[0] > 255)
+      fanSpeed[0] = 255;
+    if (fanSpeed[0] < 0)
+      fanSpeed[0] = 0;
+    break;
+  case FAN_1_CHANGE:
+    fanSpeed[1] += arg;
+    ch |= 0x02;
+    if (fanSpeed[1] > 255)
+      fanSpeed[1] = 255;
+    if (fanSpeed[1] < 0)
+      fanSpeed[1] = 0;
+    break;
+  case FAN_TOGGLE_MIN_MAX:
+    if (fanSpeed[0] != 255)
+    {
+      fanSpeed[0] = 255;
+      fanSpeed[1] = 255;
+    }
+    else
+    {
+      fanSpeed[0] = 0;
+      fanSpeed[1] = 0;
+    }
+    ch |= (0x01 | 0x02);
+    break;
+  }
+  if (ch & 0x01)
+    analogWrite(PWM_FAN_0_PIN, fanSpeed[0]);
+  if (ch & 0x02)
+    analogWrite(PWM_FAN_1_PIN, fanSpeed[1]);
+}
+
+/******************* LCD OPERATIONS *********************/
+#define LCD_INIT 0
+/***************** UTILITY FUNCTION **********************/
+
+LiquidCrystal_I2C lcd(0x27, 20, 4); // set the LCD address to 0x27 for a 16 chars and 2 line display
+
+void lcdUpdate(LiquidCrystal_I2C lcd,
                const char *line0,
                const char *line1,
                const char *line2,
@@ -64,6 +139,29 @@ void updateLcd(LiquidCrystal_I2C lcd,
   lcd.print(line3);
 }
 
+void lcdPrintFloatAt(byte x, byte y, float f) {
+  lcd.setCursor(x,y);
+  lcd.print(f);
+}
+
+void lcdOp(byte opt)
+{
+
+  switch(opt) {
+    case LCD_INIT:
+      lcd.init();
+      lcd.backlight();
+      lcdUpdate(lcd,
+                "Out:      %      C  ",
+                " In:      %      C  ",
+                "                    ",
+                "   Digital Geyser   ");
+      break;
+  }
+}
+
+/******************* SETUP CODE ************************/
+
 void setup()
 {
   int i;
@@ -71,14 +169,7 @@ void setup()
   Serial.begin(115200);
   Serial.println(F("Serial init."));
 
-  lcd.init();      //initialize the lcd
-  lcd.backlight(); //open the backlight
-  updateLcd(lcd,
-            "Out:      %      C  ",
-            " In:      %      C  ",
-            "                    ",
-            "   Digital Geyser   ");
-  Serial.println(F("LCD init."));
+  lcdOp(LCD_INIT);
 
   clock.begin();
 
@@ -96,12 +187,10 @@ void setup()
   insideSensor.begin();
   Serial.println(F("Sensor init."));
 
-  pinMode(PWM_FAN_1_PIN, OUTPUT);
-  analogWrite(PWM_FAN_1_PIN, fan1Speed);
-
-  pinMode(PWM_FAN_2_PIN, OUTPUT);
-  analogWrite(PWM_FAN_2_PIN, fan2Speed);
+  fan(FAN_INIT, 0);
 }
+
+/******************** TICK CODE **********************/
 
 void sensorTick(unsigned long currentTime)
 {
@@ -111,17 +200,13 @@ void sensorTick(unsigned long currentTime)
   {
     float h = outsideSensor.readHumidity();
     float t = outsideSensor.readTemperature();
-    lcd.setCursor(5, 0);
-    lcd.print(h);
-    lcd.setCursor(12, 0);
-    lcd.print(t);
+    lcdPrintFloatAt(5, 0, h);
+    lcdPrintFloatAt(12, 0, t);
 
     h = insideSensor.readHumidity();
     t = insideSensor.readTemperature();
-    lcd.setCursor(5, 1);
-    lcd.print(h);
-    lcd.setCursor(12, 1);
-    lcd.print(t);
+    lcdPrintFloatAt(5, 1, h);
+    lcdPrintFloatAt(12, 1, t);
     lastSensorTick = currentTime;
   }
 }
@@ -140,26 +225,6 @@ void clockTick(unsigned long currentTime)
   }
 }
 
-void fan1Change(int change)
-{
-  fan1Speed += change;
-  if (fan1Speed > 255)
-    fan1Speed = 255;
-  if (fan1Speed < 0)
-    fan1Speed = 0;
-  analogWrite(PWM_FAN_1_PIN, fan1Speed);
-}
-
-void fan2Change(int change)
-{
-  fan2Speed += change;
-  if (fan2Speed > 255)
-    fan2Speed = 255;
-  if (fan2Speed < 0)
-    fan2Speed = 0;
-  analogWrite(PWM_FAN_2_PIN, fan2Speed);
-}
-
 void checkButtons()
 {
   for (int i = 0; i < BUTTON_COUNT; i++)
@@ -172,32 +237,23 @@ void checkButtons()
         lcd.print("O");
         if (i == BUTTON_INC)
         {
-          fan1Change(25);
+          fan(FAN_0_CHANGE, 25);
         }
         else if (i == BUTTON_DEC)
         {
-          fan1Change(-25);
+          fan(FAN_0_CHANGE, -25);
         }
         else if (i == BUTTON_NEXT)
         {
-          fan2Change(25);
+          fan(FAN_1_CHANGE, 25);
         }
         else if (i == BUTTON_BEFORE)
         {
-          fan2Change(-25);
+          fan(FAN_1_CHANGE, -25);
         }
         else if (i == BUTTON_SEL)
         {
-          if (fan1Speed == 255)
-          {
-            fan1Change(-255);
-            fan2Change(-255);
-          }
-          else
-          {
-            fan1Change(255);
-            fan2Change(255);
-          }
+          fan(FAN_TOGGLE_MIN_MAX, 0);
         }
       }
       else
