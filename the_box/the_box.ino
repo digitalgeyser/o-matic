@@ -5,12 +5,12 @@
 //  RTClib - by Adafruit
 //  LiquidCrystal_I2C - by Frank de Brabander
 //  Button - by Michael Adams
-//  WiFiEsp - by bportaluri
 
 #include <RTClib.h>
 #include <LiquidCrystal_I2C.h>
 #include <DHT.h>
 #include <Button.h>
+
 
 LiquidCrystal_I2C lcd(0x27,20,4);  // set the LCD address to 0x27 for a 16 chars and 2 line display
 
@@ -20,12 +20,23 @@ LiquidCrystal_I2C lcd(0x27,20,4);  // set the LCD address to 0x27 for a 16 chars
 #define IN_SENSOR_TYPE DHT22
 #define OUT_SENSOR_TYPE DHT22
 
+#define PWM_FAN_1_PIN 10
+#define PWM_FAN_2_PIN 9
+int fan1Speed = 100; // 0 - 255
+int fan2Speed = 100; // 0 - 255
+
 #define BUTTON_COUNT 5
 Button button_next(26);
 Button button_sel(22);
 Button button_inc(24);
 Button button_before(25);
 Button button_dec(23);
+
+#define BUTTON_NEXT 0
+#define BUTTON_BEFORE 1
+#define BUTTON_INC 2
+#define BUTTON_DEC 3
+#define BUTTON_SEL 4
 
 Button buttons[5] = { button_next, button_before, button_inc, button_dec, button_sel };
 int buttonX[5] = { 12, 10, 11, 11, 11 };
@@ -51,7 +62,6 @@ void updateLcd(LiquidCrystal_I2C lcd,
   lcd.print(line2);
   lcd.setCursor ( 0, 3 );
   lcd.print(line3);
-
 }
 
 void setup() {
@@ -85,15 +95,11 @@ void setup() {
   insideSensor.begin();
   Serial.println(F("Sensor init."));
 
-  // Wifi
-  Serial1.begin(115200); // 9600, 57600, 115200
-  Serial.println(F("SerialWifi init."));
+  pinMode(PWM_FAN_1_PIN, OUTPUT);
+  analogWrite(PWM_FAN_1_PIN, fan1Speed);
 
-  if ( SendCommand("AT+GMR", "OK") ) {
-    Serial.println(F("SerialWifi initialized."));
-  } else {
-    Serial.println(F("SerialWifi not initialized."));
-  }
+  pinMode(PWM_FAN_2_PIN, OUTPUT);
+  analogWrite(PWM_FAN_2_PIN, fan2Speed);
 }
 
 
@@ -130,12 +136,49 @@ void clockTick(unsigned long currentTime) {
   }
 }
 
+void fan1Change(int change)
+{
+  fan1Speed += change;
+  if (fan1Speed > 255)
+    fan1Speed = 255;
+  if(fan1Speed < 0 )
+    fan1Speed = 0;
+  analogWrite(PWM_FAN_1_PIN, fan1Speed);
+}
+
+void fan2Change(int change)
+{
+  fan2Speed += change;
+  if (fan2Speed > 255)
+    fan2Speed = 255;
+  if(fan2Speed < 0 )
+    fan2Speed = 0;
+  analogWrite(PWM_FAN_2_PIN, fan2Speed);
+}
+
 void checkButtons() {
   for ( int i = 0; i<BUTTON_COUNT; i++ ) {
     if ( buttons[i].toggled() ) {
       lcd.setCursor(buttonX[i], buttonY[i]);
       if ( buttons[i].read() == Button::PRESSED ) {
         lcd.print("O");
+        if ( i == BUTTON_INC ) {
+          fan1Change(25);
+        } else if ( i == BUTTON_DEC ) {
+          fan1Change(-25);
+        } else if ( i == BUTTON_NEXT ) {
+          fan2Change(25);
+        } else if ( i == BUTTON_BEFORE ) {
+          fan2Change(-25);
+        } else if ( i == BUTTON_SEL ) {
+          if ( fan1Speed == 255 ) {
+            fan1Change(-255);
+            fan2Change(-255);
+          } else {
+            fan1Change(255);
+            fan2Change(255);
+          }
+        }
       } else {
         lcd.print(" ");
       }     
@@ -149,28 +192,4 @@ void loop() {
 
   sensorTick(currentTime);
   clockTick(currentTime);
-}
-
-boolean SendCommand(String cmd, String ack){
-  Serial.println(cmd);
-  Serial1.println(cmd); // Send "AT+" command to module
-  return echoFind(ack);
-}
- 
-boolean echoFind(String keyword){
-  byte current_char = 0;
-  byte keyword_length = keyword.length();
-  long deadline = millis() + 3000;
-  while(millis() < deadline) {
-    if (Serial1.available()){
-      char ch = Serial1.read();
-      Serial.print(ch);
-      if (ch == keyword[current_char])
-        if (++current_char == keyword_length){
-        Serial.println();
-        return true;
-      }
-    }
-  }
- return false; // Timed out
 }
