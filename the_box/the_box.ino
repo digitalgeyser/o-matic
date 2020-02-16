@@ -17,9 +17,6 @@
 #define IN_SENSOR_TYPE DHT22
 #define OUT_SENSOR_TYPE DHT22
 
-int fan1Speed = 100; // 0 - 255
-int fan2Speed = 100; // 0 - 255
-
 #define BUTTON_COUNT 5
 Button button_next(26);
 Button button_sel(22);
@@ -123,8 +120,7 @@ void fan(byte opt, int arg)
 
 LiquidCrystal_I2C lcd(0x27, 20, 4); // set the LCD address to 0x27 for a 16 chars and 2 line display
 
-void lcdUpdate(LiquidCrystal_I2C lcd,
-               const char *line0,
+void lcdUpdate(const char *line0,
                const char *line1,
                const char *line2,
                const char *line3)
@@ -144,6 +140,11 @@ void lcdPrintFloatAt(byte x, byte y, float f) {
   lcd.print(f);
 }
 
+void lcdPrintStringAt(byte x, byte y, const char *s) {
+  lcd.setCursor(x,y);
+  lcd.print(s);
+}
+
 void lcdOp(byte opt)
 {
 
@@ -151,8 +152,7 @@ void lcdOp(byte opt)
     case LCD_INIT:
       lcd.init();
       lcd.backlight();
-      lcdUpdate(lcd,
-                "Out:      %      C  ",
+      lcdUpdate("Out:      %      C  ",
                 " In:      %      C  ",
                 "                    ",
                 "   Digital Geyser   ");
@@ -219,8 +219,7 @@ void clockTick(unsigned long currentTime)
   {
     DateTime now = clock.now();
     char buf2[] = "MM/DD/YYYY  hh:mm:ss";
-    lcd.setCursor(0, 3);
-    lcd.print(now.toString(buf2));
+    lcdPrintStringAt(0, 3, now.toString(buf2));
     lastClockTick = currentTime;
   }
 }
@@ -231,10 +230,9 @@ void checkButtons()
   {
     if (buttons[i].toggled())
     {
-      lcd.setCursor(buttonX[i], buttonY[i]);
       if (buttons[i].read() == Button::PRESSED)
       {
-        lcd.print("O");
+        lcdPrintStringAt(buttonX[i], buttonY[i], "O");
         if (i == BUTTON_INC)
         {
           fan(FAN_0_CHANGE, 25);
@@ -258,7 +256,7 @@ void checkButtons()
       }
       else
       {
-        lcd.print(" ");
+        lcdPrintStringAt(buttonX[i], buttonY[i], " ");
       }
     }
   }
