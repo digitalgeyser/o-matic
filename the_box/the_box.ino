@@ -11,8 +11,7 @@
 #include <DHT.h>
 #include <Button.h>
 
-
-LiquidCrystal_I2C lcd(0x27,20,4);  // set the LCD address to 0x27 for a 16 chars and 2 line display
+LiquidCrystal_I2C lcd(0x27, 20, 4); // set the LCD address to 0x27 for a 16 chars and 2 line display
 
 #define TEMPERATURE_HUMIDITY_SENSOR_OUT_PIN 30
 #define TEMPERATURE_HUMIDITY_SENSOR_IN_PIN 31
@@ -38,9 +37,9 @@ Button button_dec(23);
 #define BUTTON_DEC 3
 #define BUTTON_SEL 4
 
-Button buttons[5] = { button_next, button_before, button_inc, button_dec, button_sel };
-int buttonX[5] = { 12, 10, 11, 11, 11 };
-int buttonY[5] = {  2,  2,  1,  3,  2 };
+Button buttons[5] = {button_next, button_before, button_inc, button_dec, button_sel};
+int buttonX[5] = {12, 10, 11, 11, 11};
+int buttonY[5] = {2, 2, 1, 3, 2};
 
 RTC_DS3231 clock;
 
@@ -53,26 +52,27 @@ void updateLcd(LiquidCrystal_I2C lcd,
                const char *line0,
                const char *line1,
                const char *line2,
-               const char *line3) {
-  lcd.setCursor ( 0, 0 );
+               const char *line3)
+{
+  lcd.setCursor(0, 0);
   lcd.print(line0);
-  lcd.setCursor ( 0, 1 );
+  lcd.setCursor(0, 1);
   lcd.print(line1);
-  lcd.setCursor ( 0, 2 );
+  lcd.setCursor(0, 2);
   lcd.print(line2);
-  lcd.setCursor ( 0, 3 );
+  lcd.setCursor(0, 3);
   lcd.print(line3);
 }
 
-void setup() {
+void setup()
+{
   int i;
 
   Serial.begin(115200);
   Serial.println(F("Serial init."));
 
-  
-  lcd.init();  //initialize the lcd
-  lcd.backlight();  //open the backlight 
+  lcd.init();      //initialize the lcd
+  lcd.backlight(); //open the backlight
   updateLcd(lcd,
             "Out:      %      C  ",
             " In:      %      C  ",
@@ -81,13 +81,14 @@ void setup() {
   Serial.println(F("LCD init."));
 
   clock.begin();
-  
+
   // This line will set the time to whatever the time was when the sketch was compiled.
   // Take this out later.
   clock.adjust(DateTime(F(__DATE__), F(__TIME__)));
   Serial.println(F("Clock init."));
 
-  for ( i = 0; i<BUTTON_COUNT; i++ ) {
+  for (i = 0; i < BUTTON_COUNT; i++)
+  {
     buttons[i].begin();
   }
 
@@ -102,11 +103,12 @@ void setup() {
   analogWrite(PWM_FAN_2_PIN, fan2Speed);
 }
 
-
-void sensorTick(unsigned long currentTime) {
+void sensorTick(unsigned long currentTime)
+{
   static unsigned long lastSensorTick = 0;
 
-  if ( currentTime - lastSensorTick > 5000 ) {
+  if (currentTime - lastSensorTick > 5000)
+  {
     float h = outsideSensor.readHumidity();
     float t = outsideSensor.readTemperature();
     lcd.setCursor(5, 0);
@@ -124,13 +126,15 @@ void sensorTick(unsigned long currentTime) {
   }
 }
 
-void clockTick(unsigned long currentTime) {
+void clockTick(unsigned long currentTime)
+{
   static unsigned long lastClockTick = 0;
 
-  if ( currentTime - lastClockTick > 1000 ) {
+  if (currentTime - lastClockTick > 1000)
+  {
     DateTime now = clock.now();
     char buf2[] = "MM/DD/YYYY  hh:mm:ss";
-    lcd.setCursor ( 0, 3 );
+    lcd.setCursor(0, 3);
     lcd.print(now.toString(buf2));
     lastClockTick = currentTime;
   }
@@ -141,7 +145,7 @@ void fan1Change(int change)
   fan1Speed += change;
   if (fan1Speed > 255)
     fan1Speed = 255;
-  if(fan1Speed < 0 )
+  if (fan1Speed < 0)
     fan1Speed = 0;
   analogWrite(PWM_FAN_1_PIN, fan1Speed);
 }
@@ -151,42 +155,61 @@ void fan2Change(int change)
   fan2Speed += change;
   if (fan2Speed > 255)
     fan2Speed = 255;
-  if(fan2Speed < 0 )
+  if (fan2Speed < 0)
     fan2Speed = 0;
   analogWrite(PWM_FAN_2_PIN, fan2Speed);
 }
 
-void checkButtons() {
-  for ( int i = 0; i<BUTTON_COUNT; i++ ) {
-    if ( buttons[i].toggled() ) {
+void checkButtons()
+{
+  for (int i = 0; i < BUTTON_COUNT; i++)
+  {
+    if (buttons[i].toggled())
+    {
       lcd.setCursor(buttonX[i], buttonY[i]);
-      if ( buttons[i].read() == Button::PRESSED ) {
+      if (buttons[i].read() == Button::PRESSED)
+      {
         lcd.print("O");
-        if ( i == BUTTON_INC ) {
+        if (i == BUTTON_INC)
+        {
           fan1Change(25);
-        } else if ( i == BUTTON_DEC ) {
+        }
+        else if (i == BUTTON_DEC)
+        {
           fan1Change(-25);
-        } else if ( i == BUTTON_NEXT ) {
+        }
+        else if (i == BUTTON_NEXT)
+        {
           fan2Change(25);
-        } else if ( i == BUTTON_BEFORE ) {
+        }
+        else if (i == BUTTON_BEFORE)
+        {
           fan2Change(-25);
-        } else if ( i == BUTTON_SEL ) {
-          if ( fan1Speed == 255 ) {
+        }
+        else if (i == BUTTON_SEL)
+        {
+          if (fan1Speed == 255)
+          {
             fan1Change(-255);
             fan2Change(-255);
-          } else {
+          }
+          else
+          {
             fan1Change(255);
             fan2Change(255);
           }
         }
-      } else {
+      }
+      else
+      {
         lcd.print(" ");
-      }     
+      }
     }
   }
 }
 
-void loop() {
+void loop()
+{
   unsigned long currentTime = millis();
   checkButtons();
 
