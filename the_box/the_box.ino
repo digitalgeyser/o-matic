@@ -11,12 +11,22 @@
 #include <DHT.h>
 #include <Button.h>
 
+
+/********************** CLOCK **************************/
+RTC_DS3231 clock;
+unsigned long lastClockTick = 0;
+
+/********************** SENSORS *************************/
 #define TEMPERATURE_HUMIDITY_SENSOR_OUT_PIN 30
 #define TEMPERATURE_HUMIDITY_SENSOR_IN_PIN 31
 
 #define IN_SENSOR_TYPE DHT22
 #define OUT_SENSOR_TYPE DHT22
+DHT outsideSensor(TEMPERATURE_HUMIDITY_SENSOR_OUT_PIN, OUT_SENSOR_TYPE);
+DHT insideSensor(TEMPERATURE_HUMIDITY_SENSOR_IN_PIN, IN_SENSOR_TYPE);
 
+
+/********************** BUTTONS *************************/
 #define BUTTON_COUNT 5
 Button button_next(26);
 Button button_sel(22);
@@ -34,12 +44,45 @@ Button buttons[5] = {button_next, button_before, button_inc, button_dec, button_
 int buttonX[5] = {12, 10, 11, 11, 11};
 int buttonY[5] = {2, 2, 1, 3, 2};
 
-RTC_DS3231 clock;
+void initButtons() {
+  int i;
+  for (i = 0; i < BUTTON_COUNT; i++)
+  {
+    buttons[i].begin();
+  }
+}
 
-DHT outsideSensor(TEMPERATURE_HUMIDITY_SENSOR_OUT_PIN, OUT_SENSOR_TYPE);
-DHT insideSensor(TEMPERATURE_HUMIDITY_SENSOR_IN_PIN, IN_SENSOR_TYPE);
+/********************** PELTIER OPERATIONS **************/
+#define PELTIER_RELAY_0_PIN 34
+#define PELTIER_RELAY_1_PIN 35
 
-unsigned long lastClockTick = 0;
+#define PELTIER_INIT 0
+#define PELTIER_HEAT 1
+#define PELTIER_COOL 2
+#define PELTIER_OFF 3
+
+void peltier(byte opt) {
+  static int state;
+  switch(opt) {
+    case PELTIER_INIT:
+      pinMode(PELTIER_RELAY_0_PIN, OUTPUT);
+      pinMode(PELTIER_RELAY_1_PIN, OUTPUT);
+      state = 0;
+      break;
+    case PELTIER_OFF:
+      state = 0;
+      break;
+    case PELTIER_HEAT:
+      state = 0x01;
+      break;
+    case PELTIER_COOL:
+      state = 0x02;
+      break;
+  }
+
+  digitalWrite(PELTIER_RELAY_1_PIN, state & 0x01 ? LOW: HIGH);
+  digitalWrite(PELTIER_RELAY_0_PIN, state & 0x02 ? LOW: HIGH);
+}
 
 /********************** FAN OPERATIONS ******************/
 #define FAN_INIT 0
@@ -51,6 +94,19 @@ unsigned long lastClockTick = 0;
 
 #define PWM_FAN_0_PIN 10
 #define PWM_FAN_1_PIN 9
+
+#define FAN_0_TACH_PIN 2
+#define FAN_1_TACH_PIN 3
+
+volatile int fan0PulseCounter, fan1PulseCounter;
+
+void fan0Tach() {
+  fan0PulseCounter++;
+}
+
+void fan1Tach() {
+  fan1PulseCounter++;
+}
 
 /**
  * Performs a fan operation.
@@ -67,6 +123,8 @@ void fan(byte opt, int arg)
   case FAN_INIT:
     pinMode(PWM_FAN_0_PIN, OUTPUT);
     pinMode(PWM_FAN_1_PIN, OUTPUT);
+    attachInterrupt(digitalPinToInterrupt(FAN_0_TACH_PIN), fan0Tach, RISING);
+    attachInterrupt(digitalPinToInterrupt(FAN_1_TACH_PIN), fan1Tach, RISING);
     ch |= (0x01 | 0x02);
     break;
   case FAN_0_SET:
@@ -113,6 +171,19 @@ void fan(byte opt, int arg)
     analogWrite(PWM_FAN_1_PIN, fanSpeed[1]);
 }
 
+void fanTick(unsigned long currentTime)
+{
+  static unsigned long lastFanTick = 0;
+
+  if ( (currentTime - lastFanTick) > 1000) {
+    fan0PulseCounter = fan1PulseCounter = 0;
+    delay(100);
+    lcdPrintIntAt(5, 2, fan0PulseCounter); // At full speed, this is mostly 5, sometimes 4.
+    lcdPrintIntAt(12, 2, fan1PulseCounter); // When fan is not spinning, this is 0.
+    lastFanTick = currentTime;
+  }
+}
+
 /******************* LCD OPERATIONS *********************/
 LiquidCrystal_I2C lcd(0x27, 20, 4); // set the LCD address to 0x27 for a 16 chars and 2 line display
 
@@ -134,6 +205,11 @@ void lcdPrintFloatAt(byte x, byte y, float f)
   lcd.print(f);
 }
 
+void lcdPrintIntAt(byte x, byte y, int i) {
+  lcd.setCursor(x, y);
+  lcd.print(i);
+}
+
 void lcdPrintStringAt(byte x, byte y, const char *s)
 {
   lcd.setCursor(x, y);
@@ -147,7 +223,7 @@ void lcdInit()
   lcd.backlight();
   lcdUpdate("Out:      %      C  ",
             " In:      %      C  ",
-            "                    ",
+            "Fan:                 ",
             "   Digital Geyser   ");
 }
 
@@ -155,13 +231,11 @@ void lcdInit()
 
 void setup()
 {
-  int i;
-
   Serial.begin(115200);
   Serial.println(F("Serial init."));
 
   lcdInit();
-
+  
   clock.begin();
 
   // This line will set the time to whatever the time was when the sketch was compiled.
@@ -169,15 +243,12 @@ void setup()
   clock.adjust(DateTime(F(__DATE__), F(__TIME__)));
   Serial.println(F("Clock init."));
 
-  for (i = 0; i < BUTTON_COUNT; i++)
-  {
-    buttons[i].begin();
-  }
-
+  initButtons();
   outsideSensor.begin();
   insideSensor.begin();
   Serial.println(F("Sensor init."));
 
+  peltier(PELTIER_INIT);
   fan(FAN_INIT, 0);
 }
 
@@ -227,18 +298,20 @@ void checkButtons()
         if (i == BUTTON_INC)
         {
           fan(FAN_0_CHANGE, 25);
+          fan(FAN_1_CHANGE, 25);
         }
         else if (i == BUTTON_DEC)
         {
           fan(FAN_0_CHANGE, -25);
+          fan(FAN_1_CHANGE, -25);
         }
         else if (i == BUTTON_NEXT)
         {
-          fan(FAN_1_CHANGE, 25);
+          peltier(PELTIER_HEAT);
         }
         else if (i == BUTTON_BEFORE)
         {
-          fan(FAN_1_CHANGE, -25);
+          peltier(PELTIER_COOL);
         }
         else if (i == BUTTON_SEL)
         {
@@ -260,4 +333,5 @@ void loop()
 
   sensorTick(currentTime);
   clockTick(currentTime);
+  fanTick(currentTime);
 }
