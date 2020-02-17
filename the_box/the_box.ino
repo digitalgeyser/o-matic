@@ -133,7 +133,7 @@ void peltierPrintState() {
     case PELTIER_STATE_TOCOOL: s = "..cool.."; break;
     case PELTIER_STATE_TOOFF:  s = "..off..."; break;
   }
-  lcdPrintStringAt(12, 2, s);
+  lcdPeltierUpdate(s);
 }
 
 void peltierTick(unsigned long currentTime) {
@@ -329,14 +329,34 @@ void fanTick(unsigned long currentTime)
     delay(100);
     detachInterrupt(digitalPinToInterrupt(FAN_0_TACH_PIN));
     detachInterrupt(digitalPinToInterrupt(FAN_1_TACH_PIN));
-    lcdPrintIntAt(5, 2, fan0PulseCounter); // At full speed, this is mostly 5, sometimes 4.
-    lcdPrintIntAt(7, 2, fan1PulseCounter); // When fan is not spinning, this is 0.
+    lcdFanUpdate(fan0PulseCounter, fan1PulseCounter);
     lastFanTick = currentTime;
   }
 }
 
 /******************* LCD OPERATIONS *********************/
 LiquidCrystal_I2C lcd(0x27, 20, 4); // set the LCD address to 0x27 for a 16 chars and 2 line display
+
+void lcdSensorUpdate(float hOut, float tOut, float hIn, float tIn) {
+    lcdPrintFloatAt(5, 0, hOut);
+    lcdPrintFloatAt(12, 0, tOut);
+    lcdPrintFloatAt(5, 1, hIn);
+    lcdPrintFloatAt(12, 1, tIn);
+}
+
+void lcdPeltierUpdate(const char *s) {
+    lcdPrintStringAt(12, 2, s);
+}
+
+void lcdFanUpdate(int fan0Counter, int fan1Counter) {
+    lcdPrintIntAt(5, 2, fan0Counter); // At full speed, this is mostly 5, sometimes 4.
+    lcdPrintIntAt(7, 2, fan1Counter); // When fan is not spinning, this is 0.
+}
+
+void lcdClockUpdate(DateTime dt) {
+    char buf2[] = "MM/DD/YYYY  hh:mm:ss";
+    lcdPrintStringAt(0, 3, dt.toString(buf2));
+}
 
 void lcdUpdate(const char *line0, const char *line1, const char *line2, const char *line3)
 {
@@ -403,7 +423,7 @@ void setup()
   fan(FAN_INIT, 0);
 }
 
-/******************** TICK CODE **********************/
+/******************** SENSOR CODE **********************/
 
 void sensorTick(unsigned long currentTime)
 {
@@ -411,18 +431,19 @@ void sensorTick(unsigned long currentTime)
 
   if (currentTime - lastSensorTick > 5000)
   {
-    float h = outsideSensor.readHumidity();
-    float t = outsideSensor.readTemperature();
-    lcdPrintFloatAt(5, 0, h);
-    lcdPrintFloatAt(12, 0, t);
+    float hOut = outsideSensor.readHumidity();
+    float tOut = outsideSensor.readTemperature();
 
-    h = insideSensor.readHumidity();
-    t = insideSensor.readTemperature();
-    lcdPrintFloatAt(5, 1, h);
-    lcdPrintFloatAt(12, 1, t);
+    float hIn = insideSensor.readHumidity();
+    float tIn = insideSensor.readTemperature();
+
+    lcdSensorUpdate(hOut, tOut, hIn, tIn);
+
     lastSensorTick = currentTime;
   }
 }
+
+/******************** TICK CODE **********************/
 
 void clockTick(unsigned long currentTime)
 {
@@ -431,8 +452,7 @@ void clockTick(unsigned long currentTime)
   if (currentTime - lastClockTick > 1000)
   {
     DateTime now = clock.now();
-    char buf2[] = "MM/DD/YYYY  hh:mm:ss";
-    lcdPrintStringAt(0, 3, now.toString(buf2));
+    lcdClockUpdate(now);
     lastClockTick = currentTime;
   }
 }
