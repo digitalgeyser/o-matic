@@ -337,6 +337,16 @@ void fanTick(unsigned long currentTime)
 /******************* LCD OPERATIONS *********************/
 LiquidCrystal_I2C lcd(0x27, 20, 4); // set the LCD address to 0x27 for a 16 chars and 2 line display
 
+int currentScreen = 0;
+const char *screen[][4] = {
+  {
+    "Out:      %      C  ",
+    " In:      %      C  ",
+    "Fan:                ",
+    "   Digital Geyser   "
+  }
+};
+
 void lcdSensorUpdate(float hOut, float tOut, float hIn, float tIn) {
     lcdPrintFloatAt(5, 0, hOut);
     lcdPrintFloatAt(12, 0, tOut);
@@ -387,15 +397,16 @@ void lcdPrintStringAt(byte x, byte y, const char *s)
   lcd.print(s);
 }
 
+void lcdDrawScreen(int n) {
+  currentScreen = n;
+  lcdUpdate(screen[n][0], screen[n][1], screen[n][2], screen[n][3]);
+}
+
 void lcdInit()
 {
-
   lcd.init();
   lcd.backlight();
-  lcdUpdate("Out:      %      C  ",
-            " In:      %      C  ",
-            "Fan:                 ",
-            "   Digital Geyser   ");
+  lcdDrawScreen(0);
 }
 
 /******************* SETUP CODE ************************/
