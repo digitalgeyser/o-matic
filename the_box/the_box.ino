@@ -41,8 +41,6 @@ Button button_dec(23);
 #define BUTTON_SEL 4
 
 Button buttons[5] = {button_next, button_before, button_inc, button_dec, button_sel};
-int buttonX[5] = {12, 10, 11, 11, 11};
-int buttonY[5] = {2, 2, 1, 3, 2};
 
 void initButtons() {
   int i;
@@ -55,33 +53,53 @@ void initButtons() {
 /********************** PELTIER OPERATIONS **************/
 #define PELTIER_RELAY_0_PIN 34
 #define PELTIER_RELAY_1_PIN 35
+#define PELTIER_RELAY_MASTER 36
 
-#define PELTIER_INIT 0
-#define PELTIER_HEAT 1
-#define PELTIER_COOL 2
-#define PELTIER_OFF 3
+#define PELTIER_COOL 0x00
+#define PELTIER_OFF 0x01
+#define PELTIER_HEAT 0x03
+#define PELTIER_INIT 0xF0
+#define PELTIER_NEXT 0xF1
 
 void peltier(byte opt) {
-  static int state;
+  static int state = -1;
+  int oldState = state;
   switch(opt) {
     case PELTIER_INIT:
       pinMode(PELTIER_RELAY_0_PIN, OUTPUT);
       pinMode(PELTIER_RELAY_1_PIN, OUTPUT);
-      state = 0;
+      pinMode(PELTIER_RELAY_MASTER, OUTPUT);
+      state = PELTIER_OFF;
       break;
-    case PELTIER_OFF:
-      state = 0;
+    case PELTIER_NEXT:
+      if ( state == PELTIER_HEAT )
+      {
+        state = PELTIER_OFF;
+      } else if ( state == PELTIER_OFF ) {
+        state = PELTIER_COOL;
+      } else if ( state == PELTIER_COOL ) {
+        state = PELTIER_HEAT;
+      }
       break;
     case PELTIER_HEAT:
-      state = 0x01;
-      break;
     case PELTIER_COOL:
-      state = 0x02;
+    case PELTIER_OFF:
+      state = opt;
       break;
   }
-
-  digitalWrite(PELTIER_RELAY_1_PIN, state & 0x01 ? LOW: HIGH);
-  digitalWrite(PELTIER_RELAY_0_PIN, state & 0x02 ? LOW: HIGH);
+  if ( oldState != state ) {
+    if ( oldState == PELTIER_OFF ) {
+      digitalWrite(PELTIER_RELAY_MASTER, LOW); // Turn master relay on
+      digitalWrite(PELTIER_RELAY_1_PIN, state & 0x01 ? LOW: HIGH);
+      digitalWrite(PELTIER_RELAY_0_PIN, state & 0x02 ? LOW: HIGH);
+    } else if ( state == PELTIER_OFF ) {
+      digitalWrite(PELTIER_RELAY_MASTER, HIGH);  // Turn master relay off
+    } else {
+      digitalWrite(PELTIER_RELAY_1_PIN, state & 0x01 ? LOW: HIGH);
+      digitalWrite(PELTIER_RELAY_0_PIN, state & 0x02 ? LOW: HIGH);
+    }
+    lcdPrintStringAt(11, 2, state == PELTIER_OFF ? "off " : (state == PELTIER_COOL ? "cool" : "heat" ));    
+  }
 }
 
 /********************** FAN OPERATIONS ******************/
@@ -179,7 +197,7 @@ void fanTick(unsigned long currentTime)
     detachInterrupt(digitalPinToInterrupt(FAN_0_TACH_PIN));
     detachInterrupt(digitalPinToInterrupt(FAN_1_TACH_PIN));
     lcdPrintIntAt(5, 2, fan0PulseCounter); // At full speed, this is mostly 5, sometimes 4.
-    lcdPrintIntAt(12, 2, fan1PulseCounter); // When fan is not spinning, this is 0.
+    lcdPrintIntAt(7, 2, fan1PulseCounter); // When fan is not spinning, this is 0.
     lastFanTick = currentTime;
   }
 }
@@ -294,7 +312,6 @@ void checkButtons()
     {
       if (buttons[i].read() == Button::PRESSED)
       {
-        lcdPrintStringAt(buttonX[i], buttonY[i], "O");
         if (i == BUTTON_INC)
         {
           fan(FAN_0_CHANGE, 25);
@@ -307,7 +324,7 @@ void checkButtons()
         }
         else if (i == BUTTON_NEXT)
         {
-          peltier(PELTIER_HEAT);
+          peltier(PELTIER_NEXT);
         }
         else if (i == BUTTON_BEFORE)
         {
@@ -317,10 +334,6 @@ void checkButtons()
         {
           fan(FAN_TOGGLE_MIN_MAX, 0);
         }
-      }
-      else
-      {
-        lcdPrintStringAt(buttonX[i], buttonY[i], " ");
       }
     }
   }
