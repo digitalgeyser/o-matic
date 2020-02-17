@@ -55,63 +55,185 @@ void initButtons() {
 #define PELTIER_RELAY_1_PIN 35
 #define PELTIER_RELAY_MASTER 36
 
-#define PELTIER_COOL 0x00
-#define PELTIER_OFF 0x01
-#define PELTIER_HEAT 0x03
-#define PELTIER_INIT 0xF0
-#define PELTIER_NEXT 0xF1
+#define PELTIER_STATE_COOL 0x00
+#define PELTIER_STATE_OFF 0x01
+#define PELTIER_STATE_HEAT 0x02
+#define PELTIER_STATE_TOCOOL 0x03
+#define PELTIER_STATE_TOHEAT 0x04
+#define PELTIER_STATE_TOOFF 0x05
 
-int peltierState;
+#define RELAY_0_BIT 0x01
+#define RELAY_1_BIT 0x02
+#define RELAY_MASTER_BIT 0x04
+
+int peltierHardwareState; // Bits: 0 = HIGH, 1 = LOW
+int peltierEngineState;
+unsigned long int peltierLastTransitionTime;
+
+void peltierHardwareHeat() {
+  peltierHardwareOn();
+  if ( !(peltierHardwareState & RELAY_1_BIT) ) {
+    digitalWrite(PELTIER_RELAY_1_PIN, LOW);
+    peltierHardwareState |= RELAY_1_BIT;
+  }
+
+  if ( !(peltierHardwareState & RELAY_0_BIT) ) {
+      digitalWrite(PELTIER_RELAY_0_PIN, LOW);
+    peltierHardwareState |= RELAY_0_BIT;
+  }
+}
+
+
+void peltierHardwareCool() {
+  peltierHardwareOn();
+  if ( peltierHardwareState & RELAY_1_BIT ) {
+    digitalWrite(PELTIER_RELAY_1_PIN, HIGH);
+    peltierHardwareState &= (~RELAY_1_BIT);
+  }
+
+  if ( peltierHardwareState & RELAY_0_BIT ) {
+      digitalWrite(PELTIER_RELAY_0_PIN, HIGH);
+    peltierHardwareState &= (~RELAY_0_BIT);
+  }
+}
+
+void peltierHardwareOn() {
+  if ( !(peltierHardwareState & RELAY_MASTER_BIT) ) {
+    digitalWrite(PELTIER_RELAY_MASTER, LOW); // Turn master relay on
+    peltierHardwareState |= RELAY_MASTER_BIT;
+  }
+}
+
+void peltierHardwareOff() {
+  if ( peltierHardwareState & RELAY_MASTER_BIT ) {
+    digitalWrite(PELTIER_RELAY_MASTER, HIGH); // Turn master relay off
+    peltierHardwareState &= (~RELAY_MASTER_BIT);
+  }
+}
+
+void peltierInit() {
+      pinMode(PELTIER_RELAY_0_PIN, OUTPUT);
+      pinMode(PELTIER_RELAY_1_PIN, OUTPUT);
+      pinMode(PELTIER_RELAY_MASTER, OUTPUT);
+      digitalWrite(PELTIER_RELAY_1_PIN, HIGH);
+      digitalWrite(PELTIER_RELAY_0_PIN, HIGH);
+      digitalWrite(PELTIER_RELAY_MASTER, HIGH); // Turn master relay off
+      peltierHardwareState = 0;
+      peltierEngineState = PELTIER_STATE_OFF;
+      peltierPrintState();
+}
+
+void peltierPrintState() {
+  const char *s;
+  switch(peltierEngineState) {
+    case PELTIER_STATE_OFF:    s = "OFF     "; break;
+    case PELTIER_STATE_HEAT:   s = "HEATING "; break;
+    case PELTIER_STATE_COOL:   s = "COOLING "; break;
+    case PELTIER_STATE_TOHEAT: s = "..heat.."; break;
+    case PELTIER_STATE_TOCOOL: s = "..cool.."; break;
+    case PELTIER_STATE_TOOFF:  s = "..off..."; break;
+  }
+  lcdPrintStringAt(12, 2, s);
+}
 
 void peltierTick(unsigned long currentTime) {
   static unsigned long lastPeltierTick = 0;
 
   // Do something only every second
   if ( currentTime - lastPeltierTick > 1000 ) {
-
+    switch(peltierEngineState) {
+      case PELTIER_STATE_TOOFF:
+        if ( currentTime - peltierLastTransitionTime > 5000 ) {
+          peltierEngineState = PELTIER_STATE_OFF;
+          peltierHardwareOff();
+          peltierPrintState();
+        }
+        break;
+      case PELTIER_STATE_TOCOOL:
+        if ( currentTime - peltierLastTransitionTime > 5000 ) {
+          peltierEngineState = PELTIER_STATE_COOL;
+          peltierHardwareCool();
+          peltierPrintState();
+        }
+        break;
+      case PELTIER_STATE_TOHEAT:
+        if ( currentTime - peltierLastTransitionTime > 5000 ) {
+          peltierEngineState = PELTIER_STATE_HEAT;
+          peltierHardwareHeat();
+          peltierPrintState();
+        }
+        break;
+    }
     lastPeltierTick = currentTime;
   }
 }
 
-void peltier(byte opt) {
-  int oldState = peltierState;
-  switch(opt) {
-    case PELTIER_INIT:
-      pinMode(PELTIER_RELAY_0_PIN, OUTPUT);
-      pinMode(PELTIER_RELAY_1_PIN, OUTPUT);
-      pinMode(PELTIER_RELAY_MASTER, OUTPUT);
-      peltierState = PELTIER_OFF;
-      break;
-    case PELTIER_NEXT:
-      if ( peltierState == PELTIER_HEAT )
-      {
-        peltierState = PELTIER_OFF;
-      } else if ( peltierState == PELTIER_OFF ) {
-        peltierState = PELTIER_COOL;
-      } else if ( peltierState == PELTIER_COOL ) {
-        peltierState = PELTIER_HEAT;
-      }
-      break;
-    case PELTIER_HEAT:
-    case PELTIER_COOL:
-    case PELTIER_OFF:
-      peltierState = opt;
-      break;
+void peltierStateOff() {
+  bool change = false;
+  switch(peltierEngineState) {
+    case PELTIER_STATE_HEAT: 
+    case PELTIER_STATE_COOL: 
+      peltierEngineState = PELTIER_STATE_TOOFF; change = true; peltierHardwareOff(); break;
+    case PELTIER_STATE_TOCOOL:
+    case PELTIER_STATE_TOHEAT:
+      peltierEngineState = PELTIER_STATE_TOOFF; change = true; break;
   }
-  if ( oldState != peltierState ) {
-    if ( oldState == PELTIER_OFF ) {
-      digitalWrite(PELTIER_RELAY_MASTER, LOW); // Turn master relay on
-      digitalWrite(PELTIER_RELAY_1_PIN, peltierState & 0x01 ? LOW: HIGH);
-      digitalWrite(PELTIER_RELAY_0_PIN, peltierState & 0x02 ? LOW: HIGH);
-    } else if ( peltierState == PELTIER_OFF ) {
-      digitalWrite(PELTIER_RELAY_MASTER, HIGH);  // Turn master relay off
-    } else {
-      digitalWrite(PELTIER_RELAY_1_PIN, peltierState & 0x01 ? LOW: HIGH);
-      digitalWrite(PELTIER_RELAY_0_PIN, peltierState & 0x02 ? LOW: HIGH);
-    }
-    lcdPrintStringAt(11, 2, peltierState == PELTIER_OFF ? "off " : (peltierState == PELTIER_COOL ? "cool" : "heat" ));    
+  if ( change ) {
+    peltierLastTransitionTime = millis();
+    peltierPrintState();
   }
 }
+
+void peltierStateCool() {
+  bool change = false;
+    switch(peltierEngineState) {
+    case PELTIER_STATE_HEAT: peltierEngineState = PELTIER_STATE_TOCOOL; change = true; peltierHardwareOff(); break;
+    case PELTIER_STATE_OFF: peltierEngineState = PELTIER_STATE_COOL;  change = true; peltierHardwareCool(); break;
+    case PELTIER_STATE_TOOFF: 
+    case PELTIER_STATE_TOHEAT: 
+      peltierEngineState = PELTIER_STATE_TOCOOL; change = true; break;
+  }
+  if ( change ) {
+    peltierLastTransitionTime = millis();
+    peltierPrintState();
+  }
+}
+
+void peltierStateHeat() {
+  bool change = false;
+   switch(peltierEngineState) {
+    case PELTIER_STATE_COOL: peltierEngineState = PELTIER_STATE_TOHEAT; change = true; peltierHardwareOff(); break;
+    case PELTIER_STATE_OFF: peltierEngineState = PELTIER_STATE_HEAT; change = true; peltierHardwareHeat(); break;
+    case PELTIER_STATE_TOOFF: 
+    case PELTIER_STATE_TOCOOL: 
+      peltierEngineState = PELTIER_STATE_TOHEAT; change = true; break;
+  }
+  if ( change ) {
+    peltierLastTransitionTime = millis();
+    peltierPrintState();
+  }
+}
+
+void peltierStateCycle(int upOrDown) {
+  switch(peltierEngineState) {
+    case PELTIER_STATE_OFF:
+    case PELTIER_STATE_TOOFF:
+      if ( upOrDown > 0 ) peltierStateCool();
+      else peltierStateHeat();
+      break;
+    case PELTIER_STATE_COOL:
+    case PELTIER_STATE_TOCOOL:
+      if ( upOrDown > 0 ) peltierStateHeat();
+      else peltierStateOff();
+      break;
+    case PELTIER_STATE_HEAT:
+    case PELTIER_STATE_TOHEAT:
+      if ( upOrDown > 0 ) peltierStateOff();
+      else peltierStateCool();
+      break;
+  }
+}
+
 
 /********************** FAN OPERATIONS ******************/
 #define FAN_INIT 0
@@ -277,7 +399,7 @@ void setup()
   insideSensor.begin();
   Serial.println(F("Sensor init."));
 
-  peltier(PELTIER_INIT);
+  peltierInit();
   fan(FAN_INIT, 0);
 }
 
@@ -335,11 +457,11 @@ void checkButtons()
         }
         else if (i == BUTTON_NEXT)
         {
-          peltier(PELTIER_NEXT);
+          peltierStateCycle(1);
         }
         else if (i == BUTTON_BEFORE)
         {
-          peltier(PELTIER_COOL);
+          peltierStateCycle(-1);
         }
         else if (i == BUTTON_SEL)
         {
