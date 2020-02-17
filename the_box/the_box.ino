@@ -61,44 +61,55 @@ void initButtons() {
 #define PELTIER_INIT 0xF0
 #define PELTIER_NEXT 0xF1
 
+int peltierState;
+
+void peltierTick(unsigned long currentTime) {
+  static unsigned long lastPeltierTick = 0;
+
+  // Do something only every second
+  if ( currentTime - lastPeltierTick > 1000 ) {
+
+    lastPeltierTick = currentTime;
+  }
+}
+
 void peltier(byte opt) {
-  static int state = -1;
-  int oldState = state;
+  int oldState = peltierState;
   switch(opt) {
     case PELTIER_INIT:
       pinMode(PELTIER_RELAY_0_PIN, OUTPUT);
       pinMode(PELTIER_RELAY_1_PIN, OUTPUT);
       pinMode(PELTIER_RELAY_MASTER, OUTPUT);
-      state = PELTIER_OFF;
+      peltierState = PELTIER_OFF;
       break;
     case PELTIER_NEXT:
-      if ( state == PELTIER_HEAT )
+      if ( peltierState == PELTIER_HEAT )
       {
-        state = PELTIER_OFF;
-      } else if ( state == PELTIER_OFF ) {
-        state = PELTIER_COOL;
-      } else if ( state == PELTIER_COOL ) {
-        state = PELTIER_HEAT;
+        peltierState = PELTIER_OFF;
+      } else if ( peltierState == PELTIER_OFF ) {
+        peltierState = PELTIER_COOL;
+      } else if ( peltierState == PELTIER_COOL ) {
+        peltierState = PELTIER_HEAT;
       }
       break;
     case PELTIER_HEAT:
     case PELTIER_COOL:
     case PELTIER_OFF:
-      state = opt;
+      peltierState = opt;
       break;
   }
-  if ( oldState != state ) {
+  if ( oldState != peltierState ) {
     if ( oldState == PELTIER_OFF ) {
       digitalWrite(PELTIER_RELAY_MASTER, LOW); // Turn master relay on
-      digitalWrite(PELTIER_RELAY_1_PIN, state & 0x01 ? LOW: HIGH);
-      digitalWrite(PELTIER_RELAY_0_PIN, state & 0x02 ? LOW: HIGH);
-    } else if ( state == PELTIER_OFF ) {
+      digitalWrite(PELTIER_RELAY_1_PIN, peltierState & 0x01 ? LOW: HIGH);
+      digitalWrite(PELTIER_RELAY_0_PIN, peltierState & 0x02 ? LOW: HIGH);
+    } else if ( peltierState == PELTIER_OFF ) {
       digitalWrite(PELTIER_RELAY_MASTER, HIGH);  // Turn master relay off
     } else {
-      digitalWrite(PELTIER_RELAY_1_PIN, state & 0x01 ? LOW: HIGH);
-      digitalWrite(PELTIER_RELAY_0_PIN, state & 0x02 ? LOW: HIGH);
+      digitalWrite(PELTIER_RELAY_1_PIN, peltierState & 0x01 ? LOW: HIGH);
+      digitalWrite(PELTIER_RELAY_0_PIN, peltierState & 0x02 ? LOW: HIGH);
     }
-    lcdPrintStringAt(11, 2, state == PELTIER_OFF ? "off " : (state == PELTIER_COOL ? "cool" : "heat" ));    
+    lcdPrintStringAt(11, 2, peltierState == PELTIER_OFF ? "off " : (peltierState == PELTIER_COOL ? "cool" : "heat" ));    
   }
 }
 
@@ -347,4 +358,5 @@ void loop()
   sensorTick(currentTime);
   clockTick(currentTime);
   fanTick(currentTime);
+  peltierTick(currentTime);
 }
