@@ -12,21 +12,19 @@
 #include <Button.h>
 
 
-/********************** CLOCK **************************/
-RTC_DS3231 clock;
-unsigned long lastClockTick = 0;
 
-/********************** SENSORS *************************/
-#define TEMPERATURE_HUMIDITY_SENSOR_OUT_PIN 30
-#define TEMPERATURE_HUMIDITY_SENSOR_IN_PIN 31
+/*
 
-#define IN_SENSOR_TYPE DHT22
-#define OUT_SENSOR_TYPE DHT22
-DHT outsideSensor(TEMPERATURE_HUMIDITY_SENSOR_OUT_PIN, OUT_SENSOR_TYPE);
-DHT insideSensor(TEMPERATURE_HUMIDITY_SENSOR_IN_PIN, IN_SENSOR_TYPE);
+$$$$$$$\  $$\   $$\ $$$$$$$$\ $$$$$$$$\  $$$$$$\  $$\   $$\  $$$$$$\  
+$$  __$$\ $$ |  $$ |\__$$  __|\__$$  __|$$  __$$\ $$$\  $$ |$$  __$$\ 
+$$ |  $$ |$$ |  $$ |   $$ |      $$ |   $$ /  $$ |$$$$\ $$ |$$ /  \__|
+$$$$$$$\ |$$ |  $$ |   $$ |      $$ |   $$ |  $$ |$$ $$\$$ |\$$$$$$\  
+$$  __$$\ $$ |  $$ |   $$ |      $$ |   $$ |  $$ |$$ \$$$$ | \____$$\ 
+$$ |  $$ |$$ |  $$ |   $$ |      $$ |   $$ |  $$ |$$ |\$$$ |$$\   $$ |
+$$$$$$$  |\$$$$$$  |   $$ |      $$ |    $$$$$$  |$$ | \$$ |\$$$$$$  |
+\_______/  \______/    \__|      \__|    \______/ \__|  \__| \______/ 
 
-
-/********************** BUTTONS *************************/
+*/                                                                      
 #define BUTTON_COUNT 5
 Button button_next(26);
 Button button_sel(22);
@@ -50,7 +48,18 @@ void initButtons() {
   }
 }
 
-/********************** PELTIER OPERATIONS **************/
+/*
+
+$$$$$$$\  $$$$$$$$\ $$\    $$$$$$$$\ $$$$$$\ $$$$$$$$\ $$$$$$$\  
+$$  __$$\ $$  _____|$$ |   \__$$  __|\_$$  _|$$  _____|$$  __$$\ 
+$$ |  $$ |$$ |      $$ |      $$ |     $$ |  $$ |      $$ |  $$ |
+$$$$$$$  |$$$$$\    $$ |      $$ |     $$ |  $$$$$\    $$$$$$$  |
+$$  ____/ $$  __|   $$ |      $$ |     $$ |  $$  __|   $$  __$$< 
+$$ |      $$ |      $$ |      $$ |     $$ |  $$ |      $$ |  $$ |
+$$ |      $$$$$$$$\ $$$$$$$$\ $$ |   $$$$$$\ $$$$$$$$\ $$ |  $$ |
+\__|      \________|\________|\__|   \______|\________|\__|  \__|
+
+*/
 #define PELTIER_RELAY_0_PIN 34
 #define PELTIER_RELAY_1_PIN 35
 #define PELTIER_RELAY_MASTER 36
@@ -235,7 +244,18 @@ void peltierStateCycle(int upOrDown) {
 }
 
 
-/********************** FAN OPERATIONS ******************/
+/*
+
+$$$$$$$$\  $$$$$$\  $$\   $$\ 
+$$  _____|$$  __$$\ $$$\  $$ |
+$$ |      $$ /  $$ |$$$$\ $$ |
+$$$$$\    $$$$$$$$ |$$ $$\$$ |
+$$  __|   $$  __$$ |$$ \$$$$ |
+$$ |      $$ |  $$ |$$ |\$$$ |
+$$ |      $$ |  $$ |$$ | \$$ |
+\__|      \__|  \__|\__|  \__|
+
+*/
 #define FAN_INIT 0
 #define FAN_0_SET 1
 #define FAN_1_SET 2
@@ -334,7 +354,18 @@ void fanTick(unsigned long currentTime)
   }
 }
 
-/******************* LCD OPERATIONS *********************/
+/*
+
+$$\       $$$$$$\  $$$$$$$\  
+$$ |     $$  __$$\ $$  __$$\ 
+$$ |     $$ /  \__|$$ |  $$ |
+$$ |     $$ |      $$ |  $$ |
+$$ |     $$ |      $$ |  $$ |
+$$ |     $$ |  $$\ $$ |  $$ |
+$$$$$$$$\\$$$$$$  |$$$$$$$  |
+\________|\______/ \_______/ 
+
+*/
 LiquidCrystal_I2C lcd(0x27, 20, 4); // set the LCD address to 0x27 for a 16 chars and 2 line display
 
 int currentScreen = 0;
@@ -409,32 +440,63 @@ void lcdInit()
   lcdDrawScreen(0);
 }
 
-/******************* SETUP CODE ************************/
+/*
 
-void setup()
-{
-  Serial.begin(115200);
-  Serial.println(F("Serial init."));
+ $$$$$$\  $$\       $$$$$$\   $$$$$$\  $$\   $$\ 
+$$  __$$\ $$ |     $$  __$$\ $$  __$$\ $$ | $$  |
+$$ /  \__|$$ |     $$ /  $$ |$$ /  \__|$$ |$$  / 
+$$ |      $$ |     $$ |  $$ |$$ |      $$$$$  /  
+$$ |      $$ |     $$ |  $$ |$$ |      $$  $$<   
+$$ |  $$\ $$ |     $$ |  $$ |$$ |  $$\ $$ |\$$\  
+\$$$$$$  |$$$$$$$$\ $$$$$$  |\$$$$$$  |$$ | \$$\ 
+ \______/ \________|\______/  \______/ \__|  \__|
 
-  lcdInit();
-  
+*/
+RTC_DS3231 clock;
+unsigned long lastClockTick = 0;
+
+void clockInit() {
   clock.begin();
 
   // This line will set the time to whatever the time was when the sketch was compiled.
   // Take this out later.
   clock.adjust(DateTime(F(__DATE__), F(__TIME__)));
-  Serial.println(F("Clock init."));
 
-  initButtons();
-  outsideSensor.begin();
-  insideSensor.begin();
-  Serial.println(F("Sensor init."));
-
-  peltierInit();
-  fan(FAN_INIT, 0);
 }
 
-/******************** SENSOR CODE **********************/
+void clockTick(unsigned long currentTime)
+{
+  static unsigned long lastClockTick = 0;
+
+  if (currentTime - lastClockTick > 1000)
+  {
+    DateTime now = clock.now();
+    lcdClockUpdate(now);
+    lastClockTick = currentTime;
+  }
+}
+
+
+/*
+
+ $$$$$$\  $$$$$$$$\ $$\   $$\  $$$$$$\   $$$$$$\  $$$$$$$\   $$$$$$\  
+$$  __$$\ $$  _____|$$$\  $$ |$$  __$$\ $$  __$$\ $$  __$$\ $$  __$$\ 
+$$ /  \__|$$ |      $$$$\ $$ |$$ /  \__|$$ /  $$ |$$ |  $$ |$$ /  \__|
+\$$$$$$\  $$$$$\    $$ $$\$$ |\$$$$$$\  $$ |  $$ |$$$$$$$  |\$$$$$$\  
+ \____$$\ $$  __|   $$ \$$$$ | \____$$\ $$ |  $$ |$$  __$$<  \____$$\ 
+$$\   $$ |$$ |      $$ |\$$$ |$$\   $$ |$$ |  $$ |$$ |  $$ |$$\   $$ |
+\$$$$$$  |$$$$$$$$\ $$ | \$$ |\$$$$$$  | $$$$$$  |$$ |  $$ |\$$$$$$  |
+ \______/ \________|\__|  \__| \______/  \______/ \__|  \__| \______/ 
+
+*/
+#define TEMPERATURE_HUMIDITY_SENSOR_OUT_PIN 30
+#define TEMPERATURE_HUMIDITY_SENSOR_IN_PIN 31
+
+#define IN_SENSOR_TYPE DHT22
+#define OUT_SENSOR_TYPE DHT22
+DHT outsideSensor(TEMPERATURE_HUMIDITY_SENSOR_OUT_PIN, OUT_SENSOR_TYPE);
+DHT insideSensor(TEMPERATURE_HUMIDITY_SENSOR_IN_PIN, IN_SENSOR_TYPE);
+
 
 void sensorTick(unsigned long currentTime)
 {
@@ -454,20 +516,55 @@ void sensorTick(unsigned long currentTime)
   }
 }
 
-/******************** TICK CODE **********************/
+void sensorInit() {
+  outsideSensor.begin();
+  insideSensor.begin();
 
-void clockTick(unsigned long currentTime)
-{
-  static unsigned long lastClockTick = 0;
-
-  if (currentTime - lastClockTick > 1000)
-  {
-    DateTime now = clock.now();
-    lcdClockUpdate(now);
-    lastClockTick = currentTime;
-  }
 }
 
+/*
+
+ $$$$$$\  $$$$$$$$\ $$$$$$$$\ $$\   $$\ $$$$$$$\  
+$$  __$$\ $$  _____|\__$$  __|$$ |  $$ |$$  __$$\ 
+$$ /  \__|$$ |         $$ |   $$ |  $$ |$$ |  $$ |
+\$$$$$$\  $$$$$\       $$ |   $$ |  $$ |$$$$$$$  |
+ \____$$\ $$  __|      $$ |   $$ |  $$ |$$  ____/ 
+$$\   $$ |$$ |         $$ |   $$ |  $$ |$$ |      
+\$$$$$$  |$$$$$$$$\    $$ |   \$$$$$$  |$$ |      
+ \______/ \________|   \__|    \______/ \__|      
+
+*/
+void setup()
+{
+  Serial.begin(115200);
+  Serial.println(F("Serial init."));
+
+  lcdInit();
+
+  clockInit();  
+  Serial.println(F("Clock init."));
+
+  initButtons();
+  sensorInit();
+  Serial.println(F("Sensor init."));
+
+  peltierInit();
+  fan(FAN_INIT, 0);
+}
+
+
+/*
+
+$$\       $$$$$$\   $$$$$$\  $$$$$$$\  
+$$ |     $$  __$$\ $$  __$$\ $$  __$$\ 
+$$ |     $$ /  $$ |$$ /  $$ |$$ |  $$ |
+$$ |     $$ |  $$ |$$ |  $$ |$$$$$$$  |
+$$ |     $$ |  $$ |$$ |  $$ |$$  ____/ 
+$$ |     $$ |  $$ |$$ |  $$ |$$ |      
+$$$$$$$$\ $$$$$$  | $$$$$$  |$$ |      
+\________|\______/  \______/ \__|      
+
+*/
 void checkButtons()
 {
   for (int i = 0; i < BUTTON_COUNT; i++)
