@@ -256,20 +256,26 @@ $$ |      $$ |  $$ |$$ | \$$ |
 \__|      \__|  \__|\__|  \__|
 
 */
+
+// FAN1 is outside one
 #define FAN_INIT 0
 #define FAN_0_SET 1
 #define FAN_1_SET 2
-#define FAN_0_CHANGE 3
-#define FAN_1_CHANGE 4
-#define FAN_TOGGLE_MIN_MAX 5
+#define FAN_2_SET 3
+#define FAN_0_CHANGE 4
+#define FAN_1_CHANGE 5
+#define FAN_2_CHANGE 6
+#define FAN_TOGGLE_MIN_MAX 7
 
 #define PWM_FAN_0_PIN 10
 #define PWM_FAN_1_PIN 9
+#define PWM_FAN_2_PIN 8
 
 #define FAN_0_TACH_PIN 2
 #define FAN_1_TACH_PIN 3
+#define FAN_2_TACH_PIN 4
 
-volatile int fan0PulseCounter, fan1PulseCounter;
+volatile int fan0PulseCounter, fan1PulseCounter, fan2PulseCounter;
 
 /**
  * Performs a fan operation.
@@ -278,7 +284,7 @@ volatile int fan0PulseCounter, fan1PulseCounter;
  */
 void fan(byte opt, int arg)
 {
-  static int fanSpeed[] = {100, 100};
+  static int fanSpeed[] = {100, 100, 100};
   int ch = 0; // bitmask tracking which fans changed
 
   switch (opt)
@@ -286,7 +292,8 @@ void fan(byte opt, int arg)
   case FAN_INIT:
     pinMode(PWM_FAN_0_PIN, OUTPUT);
     pinMode(PWM_FAN_1_PIN, OUTPUT);
-    ch |= (0x01 | 0x02);
+    pinMode(PWM_FAN_2_PIN, OUTPUT);
+    ch |= (0x01 | 0x02 | 0x04);
     break;
   case FAN_0_SET:
     fanSpeed[0] = arg;
@@ -295,6 +302,10 @@ void fan(byte opt, int arg)
   case FAN_1_SET:
     fanSpeed[1] = arg;
     ch |= 0x02;
+    break;
+  case FAN_2_SET:
+    fanSpeed[2] = arg;
+    ch |= 0x04;
     break;
   case FAN_0_CHANGE:
     fanSpeed[0] += arg;
@@ -312,29 +323,42 @@ void fan(byte opt, int arg)
     if (fanSpeed[1] < 0)
       fanSpeed[1] = 0;
     break;
+  case FAN_2_CHANGE:
+    fanSpeed[2] += arg;
+    ch |= 0x04;
+    if (fanSpeed[2] > 255)
+      fanSpeed[2] = 255;
+    if (fanSpeed[2] < 0)
+      fanSpeed[2] = 0;
+    break;
   case FAN_TOGGLE_MIN_MAX:
     if (fanSpeed[0] != 255)
     {
       fanSpeed[0] = 255;
       fanSpeed[1] = 255;
+      fanSpeed[2] = 255;
     }
     else
     {
       fanSpeed[0] = 0;
       fanSpeed[1] = 0;
+      fanSpeed[2] = 0;
     }
-    ch |= (0x01 | 0x02);
+    ch |= (0x01 | 0x02 | 0x04);
     break;
   }
   if (ch & 0x01)
     analogWrite(PWM_FAN_0_PIN, fanSpeed[0]);
   if (ch & 0x02)
     analogWrite(PWM_FAN_1_PIN, fanSpeed[1]);
+  if (ch & 0x04)
+    analogWrite(PWM_FAN_2_PIN, fanSpeed[2]);
 }
 
 // ISRs
 void fan0Tach() { fan0PulseCounter++; }
 void fan1Tach() { fan1PulseCounter++; }
+void fan2Tach() { fan2PulseCounter++; }
 
 // Fan tick is mostly just using the fan tach interrupts to measure the speed of the fan.
 // It runs every 2 seconds and consumes 200 ms to measure the fans.
@@ -343,13 +367,15 @@ void fanTick(unsigned long currentTime)
   static unsigned long lastFanTick = 0;
 
   if ( (currentTime - lastFanTick) > 2000) {
-    fan0PulseCounter = fan1PulseCounter = 0;
+    fan0PulseCounter = fan1PulseCounter = fan2PulseCounter = 0;
     attachInterrupt(digitalPinToInterrupt(FAN_0_TACH_PIN), fan0Tach, RISING);
     attachInterrupt(digitalPinToInterrupt(FAN_1_TACH_PIN), fan1Tach, RISING);
+    attachInterrupt(digitalPinToInterrupt(FAN_2_TACH_PIN), fan2Tach, RISING);
     delay(100);
     detachInterrupt(digitalPinToInterrupt(FAN_0_TACH_PIN));
     detachInterrupt(digitalPinToInterrupt(FAN_1_TACH_PIN));
-    lcdFanUpdate(fan0PulseCounter, fan1PulseCounter);
+    detachInterrupt(digitalPinToInterrupt(FAN_2_TACH_PIN));
+    lcdFanUpdate(fan0PulseCounter, fan1PulseCounter, fan2PulseCounter);
     lastFanTick = currentTime;
   }
 }
@@ -389,9 +415,10 @@ void lcdPeltierUpdate(const char *s) {
     lcdPrintStringAt(12, 2, s);
 }
 
-void lcdFanUpdate(int fan0Counter, int fan1Counter) {
+void lcdFanUpdate(int fan0Counter, int fan1Counter, int fan2Counter) {
     lcdPrintIntAt(5, 2, fan0Counter); // At full speed, this is mostly 5, sometimes 4.
     lcdPrintIntAt(7, 2, fan1Counter); // When fan is not spinning, this is 0.
+    lcdPrintIntAt(9, 2, fan2Counter); // When fan is not spinning, this is 0.
 }
 
 void lcdClockUpdate(DateTime dt) {
@@ -577,11 +604,13 @@ void checkButtons()
         {
           fan(FAN_0_CHANGE, 25);
           fan(FAN_1_CHANGE, 25);
+          fan(FAN_2_CHANGE, 25);
         }
         else if (i == BUTTON_DEC)
         {
           fan(FAN_0_CHANGE, -25);
           fan(FAN_1_CHANGE, -25);
+          fan(FAN_2_CHANGE, -25);
         }
         else if (i == BUTTON_NEXT)
         {
